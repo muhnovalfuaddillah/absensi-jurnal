@@ -10,6 +10,7 @@ class Student extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'class_id',
         'nis',
         'nisn',
@@ -20,6 +21,11 @@ class Student extends Model
         'status',
         'is_active',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     public function getFormattedParentPhoneAttribute(): ?string
     {

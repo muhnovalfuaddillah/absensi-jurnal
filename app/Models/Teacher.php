@@ -10,6 +10,7 @@ class Teacher extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'nip',
         'nuptk',
         'name',
@@ -28,6 +29,11 @@ class Teacher extends Model
         'face_data',
         'is_active',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

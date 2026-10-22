@@ -36,8 +36,9 @@
                     <p class="font-extrabold text-emerald-950">
                         {{ $selectedSchedule->subject->name }} • {{ $selectedSchedule->schoolClass->name ?? $targetClass?->name }}
                     </p>
-                    <p class="text-[11px] text-emerald-700 font-medium">
-                        Jadwal {{ $selectedSchedule->day }} ({{ $selectedSchedule->formatted_time }})
+                    <p class="text-[11px] text-emerald-700 font-medium flex items-center gap-1.5 flex-wrap">
+                        <span>Jadwal {{ $selectedSchedule->day }} ({{ $selectedSchedule->formatted_time }})</span>
+                        <span class="bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded text-[10px] border border-amber-200/80">{{ $selectedSchedule->duration_label }}</span>
                     </p>
                 </div>
             </div>

@@ -11,6 +11,7 @@ class TeachingJournal extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'teacher_id',
         'is_substitute',
         'substituted_teacher_id',
@@ -26,6 +27,11 @@ class TeachingJournal extends Model
         'attachment',
         'status',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     protected $casts = [
         'date' => 'date',
@@ -86,5 +92,59 @@ class TeachingJournal extends Model
             'izin'  => $attendances->where('status', 'izin')->count(),
             'alpa'  => $attendances->where('status', 'alpa')->count(),
         ];
+    }
+
+    /**
+     * Hitung durasi jam pelajaran (JP) untuk jurnal mengajar ini.
+     * Jika terhubung dengan jadwal pelajaran (lessonSchedule), prioritaskan nilai JP dari jadwal.
+     * Jika tidak, hitung otomatis dari selisih start_time dan end_time (asumsi 1 JP = 40-45 menit).
+     */
+    public function getEstimatedHoursAttribute(): int
+    {
+        if ($this->lessonSchedule && $this->lessonSchedule->estimated_hours) {
+            return (int) $this->lessonSchedule->estimated_hours;
+        }
+
+        if ($this->start_time && $this->end_time) {
+            $start = \Carbon\Carbon::parse($this->start_time);
+            $end = \Carbon\Carbon::parse($this->end_time);
+            $diffMinutes = $start->diffInMinutes($end);
+
+            if ($diffMinutes <= 0) {
+                return 1;
+            }
+
+            $hours = (int) round($diffMinutes / 45);
+            return max(1, $hours);
+        }
+
+        return 1;
+    }
+
+    /**
+     * Label durasi lengkap
+     * Contoh: "2 Jam Mata Pelajaran"
+     */
+    public function getDurationLabelAttribute(): string
+    {
+        return $this->estimated_hours . ' Jam Mata Pelajaran';
+    }
+
+    /**
+     * Label jam pelajaran
+     * Contoh: "2 Jam Pelajaran"
+     */
+    public function getDurationPelajaranAttribute(): string
+    {
+        return $this->estimated_hours . ' Jam Pelajaran';
+    }
+
+    /**
+     * Label singkat
+     * Contoh: "2 JP"
+     */
+    public function getDurationShortLabelAttribute(): string
+    {
+        return $this->estimated_hours . ' JP';
     }
 }

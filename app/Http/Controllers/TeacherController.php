@@ -16,8 +16,9 @@ class TeacherController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $employmentStatus = $request->input('employment_status');
+        $schoolId = current_school_id();
 
-        $query = Teacher::with('user')->orderBy('name');
+        $query = Teacher::where('school_id', $schoolId)->with('user')->orderBy('name');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -39,10 +40,10 @@ class TeacherController extends Controller
 
         $teachers = $query->paginate(15)->withQueryString();
         
-        $totalTeachers = Teacher::count();
-        $activeTeachers = Teacher::where('is_active', true)->count();
-        $tetapCount = Teacher::where('employment_status', 'like', '%Tetap%')->count();
-        $honorerCount = Teacher::where(function($q) {
+        $totalTeachers = Teacher::where('school_id', $schoolId)->count();
+        $activeTeachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->count();
+        $tetapCount = Teacher::where('school_id', $schoolId)->where('employment_status', 'like', '%Tetap%')->count();
+        $honorerCount = Teacher::where('school_id', $schoolId)->where(function($q) {
             $q->where('employment_status', 'like', '%Honorer%')
               ->orWhere('employment_status', 'like', '%GTT%');
         })->count();
@@ -86,7 +87,10 @@ class TeacherController extends Controller
             $photoPath = $request->file('photo')->store('teachers', 'public');
         }
 
+        $schoolId = current_school_id();
+
         $teacher = Teacher::create([
+            'school_id' => $schoolId,
             'nip' => $request->nip,
             'nuptk' => $request->nuptk,
             'name' => $request->name,
@@ -111,6 +115,7 @@ class TeacherController extends Controller
         $password = $request->filled('password') ? $request->password : 'guru123';
 
         User::create([
+            'school_id' => $schoolId,
             'name' => $teacher->name,
             'email' => $email,
             'username' => $username,

@@ -140,7 +140,7 @@ class GuruAcademicController extends Controller
         $classId = $request->input('class_id');
         $month = $request->input('month', now()->format('Y-m'));
 
-        $query = TeachingJournal::with(['schoolClass', 'subject', 'studentAttendances', 'teacher', 'substitutedTeacher'])
+        $query = TeachingJournal::with(['schoolClass', 'subject', 'studentAttendances', 'teacher', 'substitutedTeacher', 'lessonSchedule'])
             ->where(function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id)
                   ->orWhere('substituted_teacher_id', $teacher->id);
@@ -169,12 +169,19 @@ class GuruAcademicController extends Controller
         $journals = $query->paginate(12)->withQueryString();
         $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
 
-        // Statistik ringkas bulan ini
-        $totalJournalsMonth = TeachingJournal::where('teacher_id', $teacher->id)
+        // Statistik ringkas pertemuan dan total jam mengajar yang telah digunakan bulan ini
+        $monthJournals = TeachingJournal::with('lessonSchedule')
+            ->where(function ($q) use ($teacher) {
+                $q->where('teacher_id', $teacher->id)
+                  ->orWhere('substituted_teacher_id', $teacher->id);
+            })
             ->where('date', 'like', "{$month}%")
-            ->count();
+            ->get();
 
-        return view('guru.academic.jurnal_index', compact('teacher', 'journals', 'classes', 'month', 'classId', 'search', 'totalJournalsMonth'));
+        $totalJournalsMonth = $monthJournals->count();
+        $totalHoursMonth = $monthJournals->sum('estimated_hours');
+
+        return view('guru.academic.jurnal_index', compact('teacher', 'journals', 'classes', 'month', 'classId', 'search', 'totalJournalsMonth', 'totalHoursMonth'));
     }
 
     /**

@@ -12,6 +12,7 @@ class SchoolClass extends Model
     protected $table = 'classes';
 
     protected $fillable = [
+        'school_id',
         'name',
         'qr_code_token',
         'grade_level',
@@ -19,6 +20,11 @@ class SchoolClass extends Model
         'academic_year',
         'is_active',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     protected static function booted()
     {

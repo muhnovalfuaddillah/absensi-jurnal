@@ -11,7 +11,8 @@ class SettingController extends Controller
 {
     public function index()
     {
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
         $schedules = $setting->dailySchedules()->orderBy('day_of_week')->get();
 
         return view('settings.index', compact('setting', 'schedules'));
@@ -38,7 +39,8 @@ class SettingController extends Controller
             'schedules' => 'nullable|array',
         ]);
 
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         $updateData = [
             'school_name' => $request->school_name,
@@ -104,6 +106,23 @@ class SettingController extends Controller
         }
 
         AttendanceSetting::where('id', $setting->id)->update($updateData);
+
+        // Sinkronkan juga ke model School
+        $school = \App\Models\School::find($schoolId);
+        if ($school) {
+            $school->update([
+                'name' => $request->school_name,
+                'foundation_name' => $request->foundation_name,
+                'npsn' => $request->npsn,
+                'address' => $request->school_address,
+                'phone' => $request->school_phone,
+                'email' => $request->school_email,
+                'headmaster_name' => $request->headmaster_name,
+                'headmaster_nip' => $request->headmaster_nip,
+                'website' => $request->website,
+                'logo_path' => $updateData['logo_path'] ?? $school->logo_path,
+            ]);
+        }
 
         // Perbarui jadwal per hari jika ada input
         if ($request->has('schedules')) {

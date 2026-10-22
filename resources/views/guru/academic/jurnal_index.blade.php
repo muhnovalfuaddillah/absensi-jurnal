@@ -49,21 +49,21 @@
 
             <div class="flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white shrink-0 text-xs">
-                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <i class="fa-solid fa-hourglass-half"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] text-emerald-100 uppercase tracking-wider font-bold">Guru Pengampu</p>
-                    <p class="text-sm font-black text-white truncate max-w-[130px]">{{ $teacher->name }}</p>
+                    <p class="text-[10px] text-emerald-100 uppercase tracking-wider font-bold">Jam Terpakai Bulan Ini</p>
+                    <p class="text-sm font-black text-white">{{ $totalHoursMonth }} Jam ({{ $totalHoursMonth }} JP)</p>
                 </div>
             </div>
 
             <div class="hidden sm:flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white shrink-0 text-xs">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-chalkboard-user"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] text-emerald-100 uppercase tracking-wider font-bold">Validasi Kehadiran</p>
-                    <p class="text-sm font-black text-white">QR Code Ruang</p>
+                    <p class="text-[10px] text-emerald-100 uppercase tracking-wider font-bold">Guru Pengampu</p>
+                    <p class="text-sm font-black text-white truncate max-w-[130px]">{{ $teacher->name }}</p>
                 </div>
             </div>
         </div>
@@ -197,10 +197,15 @@
                                 </h3>
 
                                 <!-- Time & Teaching Mode Info -->
-                                <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                                <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-1 flex-wrap">
                                     <span class="flex items-center gap-1 font-medium text-slate-500">
                                         <i class="fa-regular fa-clock text-[10px] text-slate-400"></i>
                                         <span>{{ substr($j->start_time, 0, 5) }} - {{ substr($j->end_time, 0, 5) }} WIB</span>
+                                    </span>
+                                    <span>•</span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs">
+                                        <i class="fa-solid fa-hourglass-half text-[9px] text-amber-600"></i>
+                                        <span>{{ $j->duration_label }} ({{ $j->estimated_hours }} JP)</span>
                                     </span>
                                     <span>•</span>
                                     <span class="capitalize font-semibold text-slate-600">{{ $j->status }}</span>

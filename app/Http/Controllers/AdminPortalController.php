@@ -15,11 +15,12 @@ class AdminPortalController extends Controller
     public function dashboard()
     {
         $today = now()->toDateString();
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         // 1. Statistik Keseluruhan
-        $totalTeachers = Teacher::active()->count();
-        $todayAttendances = Attendance::with('teacher')->where('date', $today)->get();
+        $totalTeachers = Teacher::where('school_id', $schoolId)->active()->count();
+        $todayAttendances = Attendance::where('school_id', $schoolId)->with('teacher')->where('date', $today)->get();
 
         $hadirCount = $todayAttendances->where('status', 'hadir')->count();
         $terlambatCount = $todayAttendances->where('status', 'terlambat')->count();
@@ -33,7 +34,8 @@ class AdminPortalController extends Controller
         $attendanceRate = $totalTeachers > 0 ? round((($hadirCount + $terlambatCount) / $totalTeachers) * 100, 1) : 0;
 
         // 2. Daftar Semua Guru dengan Presensi Hari Ini (untuk tabel monitoring live)
-        $teachers = Teacher::active()
+        $teachers = Teacher::where('school_id', $schoolId)
+            ->active()
             ->with(['attendances' => function ($q) use ($today) {
                 $q->where('date', $today);
             }])
@@ -42,27 +44,30 @@ class AdminPortalController extends Controller
 
         // 3. Daftar Guru yang BELUM HADIR hari ini (untuk monitoring & tindak lanjut piket)
         $attendedTeacherIds = $todayAttendances->pluck('teacher_id')->toArray();
-        $unattendedTeachers = Teacher::active()
+        $unattendedTeachers = Teacher::where('school_id', $schoolId)
+            ->active()
             ->whereNotIn('id', $attendedTeacherIds)
             ->orderBy('name')
             ->get();
 
         // 4. Log Presensi Masuk & Pulang Terbaru Hari Ini
-        $recentAttendances = Attendance::with('teacher')
+        $recentAttendances = Attendance::where('school_id', $schoolId)
+            ->with('teacher')
             ->where('date', $today)
             ->orderBy('updated_at', 'desc')
             ->take(10)
             ->get();
 
         // 5. Permohonan Izin / Sakit Terbaru Hari Ini
-        $urgentLeave = Attendance::with('teacher')
+        $urgentLeave = Attendance::where('school_id', $schoolId)
+            ->with('teacher')
             ->where('date', $today)
             ->whereIn('status', ['izin', 'sakit'])
             ->latest()
             ->first();
 
         // PNS / Tetap (memiliki NIP) vs Honorer
-        $guruTetapCount = Teacher::active()->whereNotNull('nip')->where('nip', '!=', '')->count();
+        $guruTetapCount = Teacher::where('school_id', $schoolId)->active()->whereNotNull('nip')->where('nip', '!=', '')->count();
         $guruHonorerCount = max(0, $totalTeachers - $guruTetapCount);
 
         // 6. Data Grafik: Distribusi Waktu Masuk Guru Hari Ini

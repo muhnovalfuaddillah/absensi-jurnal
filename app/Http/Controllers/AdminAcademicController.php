@@ -26,8 +26,10 @@ class AdminAcademicController extends Controller
         $day = $request->input('day');
         $classId = $request->input('class_id');
         $teacherId = $request->input('teacher_id');
+        $schoolId = current_school_id();
 
-        $query = LessonSchedule::with(['schoolClass', 'subject', 'teacher'])
+        $query = LessonSchedule::where('school_id', $schoolId)
+            ->with(['schoolClass', 'subject', 'teacher'])
             ->orderByRaw("FIELD(day, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')")
             ->orderBy('start_time');
 
@@ -43,9 +45,9 @@ class AdminAcademicController extends Controller
 
         $schedules = $query->paginate(20)->withQueryString();
 
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
-        $teachers = Teacher::where('is_active', true)->orderBy('name')->get();
-        $subjects = Subject::orderBy('name')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $teachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $subjects = Subject::where('school_id', $schoolId)->orderBy('name')->get();
 
         return view('admin.academic.schedules_index', compact('schedules', 'classes', 'teachers', 'subjects', 'day', 'classId', 'teacherId'));
     }
@@ -59,10 +61,12 @@ class AdminAcademicController extends Controller
             'teacher_id' => 'required|exists:teachers,id',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
+            'total_hours' => 'nullable|integer|min:1|max:12',
             'room' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:255',
         ]);
 
+        $validated['school_id'] = current_school_id();
         LessonSchedule::create($validated);
 
         return back()->with('success', 'Jadwal pelajaran berhasil ditambahkan.');
@@ -79,6 +83,7 @@ class AdminAcademicController extends Controller
             'teacher_id' => 'required|exists:teachers,id',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
+            'total_hours' => 'nullable|integer|min:1|max:12',
             'room' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:255',
         ]);
@@ -103,25 +108,31 @@ class AdminAcademicController extends Controller
     */
     public function classesIndex(Request $request)
     {
-        $classes = SchoolClass::with(['homeroomTeacher'])
+        $schoolId = current_school_id();
+
+        $classes = SchoolClass::where('school_id', $schoolId)
+            ->with(['homeroomTeacher'])
             ->withCount('students')
             ->orderBy('name')
             ->get();
 
-        $teachers = Teacher::where('is_active', true)->orderBy('name')->get();
+        $teachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
 
         return view('admin.academic.classes_index', compact('classes', 'teachers'));
     }
 
     public function classesStore(Request $request)
     {
+        $schoolId = current_school_id();
+
         $validated = $request->validate([
-            'name' => 'required|string|max:50|unique:classes,name',
+            'name' => 'required|string|max:50',
             'grade_level' => 'required|string|max:20',
             'academic_year' => 'required|string|max:20',
             'homeroom_teacher_id' => 'nullable|exists:teachers,id',
         ]);
 
+        $validated['school_id'] = $schoolId;
         SchoolClass::create($validated);
 
         return back()->with('success', "Kelas {$validated['name']} berhasil dibuat.");
@@ -132,7 +143,7 @@ class AdminAcademicController extends Controller
         $class = SchoolClass::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:50|unique:classes,name,' . $class->id,
+            'name' => 'required|string|max:50',
             'grade_level' => 'required|string|max:20',
             'academic_year' => 'required|string|max:20',
             'homeroom_teacher_id' => 'nullable|exists:teachers,id',
@@ -155,7 +166,7 @@ class AdminAcademicController extends Controller
     public function printClassQr($id)
     {
         $class = SchoolClass::with('homeroomTeacher')->findOrFail($id);
-        $setting = \App\Models\AttendanceSetting::getSettings();
+        $setting = \App\Models\AttendanceSetting::getSettings(current_school_id());
 
         return view('admin.academic.class_qr_print', compact('class', 'setting'));
     }
@@ -164,8 +175,9 @@ class AdminAcademicController extends Controller
     {
         $classId = $request->input('class_id');
         $search = $request->input('search');
+        $schoolId = current_school_id();
 
-        $query = Student::with('schoolClass')->orderBy('name');
+        $query = Student::where('school_id', $schoolId)->with('schoolClass')->orderBy('name');
 
         if ($classId) {
             $query->where('class_id', $classId);
@@ -180,7 +192,7 @@ class AdminAcademicController extends Controller
         }
 
         $students = $query->paginate(25)->withQueryString();
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
 
         return view('admin.academic.students_index', compact('students', 'classes', 'classId', 'search'));
     }
@@ -199,6 +211,7 @@ class AdminAcademicController extends Controller
         ]);
 
         $validated['status'] = $validated['status'] ?? 'aktif';
+        $validated['school_id'] = current_school_id();
 
         Student::create($validated);
 
@@ -284,8 +297,10 @@ class AdminAcademicController extends Controller
         $teacherId = $request->input('teacher_id');
         $classId = $request->input('class_id');
         $search = $request->input('search');
+        $schoolId = current_school_id();
 
-        $query = TeachingJournal::with(['teacher', 'schoolClass', 'subject', 'studentAttendances'])
+        $query = TeachingJournal::where('school_id', $schoolId)
+            ->with(['teacher', 'schoolClass', 'subject', 'studentAttendances', 'lessonSchedule'])
             ->orderByDesc('date')
             ->orderByDesc('start_time');
 
@@ -305,11 +320,42 @@ class AdminAcademicController extends Controller
             });
         }
 
-        $journals = $query->paginate(15)->withQueryString();
-        $teachers = Teacher::where('is_active', true)->orderBy('name')->get();
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
+        // Ambil data untuk akumulasi jumlah jam dan sesi
+        $allFiltered = (clone $query)->get();
+        $totalSessions = $allFiltered->count();
+        $totalHoursTaught = $allFiltered->sum('estimated_hours');
+        $uniqueTeachersCount = $allFiltered->pluck('teacher_id')->unique()->count();
 
-        return view('admin.academic.journals_index', compact('journals', 'teachers', 'classes', 'date', 'teacherId', 'classId', 'search'));
+        // Rekapitulasi jam yang telah digunakan per guru
+        $teacherStats = $allFiltered->groupBy('teacher_id')->map(function ($group) {
+            $teacher = $group->first()->teacher;
+            return [
+                'teacher' => $teacher,
+                'sessions_count' => $group->count(),
+                'total_hours' => $group->sum('estimated_hours'),
+            ];
+        })->sortByDesc('total_hours')->values();
+
+        $selectedTeacher = $teacherId ? Teacher::find($teacherId) : null;
+
+        $journals = $query->paginate(15)->withQueryString();
+        $teachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.academic.journals_index', compact(
+            'journals',
+            'teachers',
+            'classes',
+            'date',
+            'teacherId',
+            'classId',
+            'search',
+            'totalSessions',
+            'totalHoursTaught',
+            'uniqueTeachersCount',
+            'teacherStats',
+            'selectedTeacher'
+        ));
     }
 
     public function journalsShow($id)
@@ -327,7 +373,8 @@ class AdminAcademicController extends Controller
     */
     public function studentAttendanceRecap(Request $request)
     {
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
+        $schoolId = current_school_id();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
         $selectedClassId = $request->input('class_id', $classes->first()?->id);
         $month = $request->input('month', now()->format('Y-m'));
 
@@ -361,7 +408,7 @@ class AdminAcademicController extends Controller
             }
         }
 
-        $setting = AttendanceSetting::getSettings();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         return view('admin.academic.student_attendance_recap', compact('classes', 'selectedClass', 'selectedClassId', 'month', 'students', 'stats', 'setting'));
     }
@@ -433,8 +480,10 @@ class AdminAcademicController extends Controller
     public function subjectsIndex(Request $request)
     {
         $search = $request->input('search');
+        $schoolId = current_school_id();
 
-        $query = Subject::withCount(['lessonSchedules', 'teachingJournals'])
+        $query = Subject::where('school_id', $schoolId)
+            ->withCount(['lessonSchedules', 'teachingJournals'])
             ->orderBy('name');
 
         if ($search) {
@@ -447,9 +496,9 @@ class AdminAcademicController extends Controller
 
         $subjects = $query->paginate(15)->withQueryString();
 
-        $totalSubjects = Subject::count();
-        $totalSchedules = LessonSchedule::count();
-        $totalJournals = TeachingJournal::count();
+        $totalSubjects = Subject::where('school_id', $schoolId)->count();
+        $totalSchedules = LessonSchedule::where('school_id', $schoolId)->count();
+        $totalJournals = TeachingJournal::where('school_id', $schoolId)->count();
 
         return view('admin.academic.subjects_index', compact('subjects', 'search', 'totalSubjects', 'totalSchedules', 'totalJournals'));
     }
@@ -457,16 +506,16 @@ class AdminAcademicController extends Controller
     public function subjectsStore(Request $request)
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:20|unique:subjects,code',
+            'code' => 'required|string|max:20',
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:500',
         ], [
             'code.required' => 'Kode mata pelajaran wajib diisi.',
-            'code.unique' => 'Kode mata pelajaran sudah digunakan.',
             'name.required' => 'Nama mata pelajaran wajib diisi.',
         ]);
 
         $validated['code'] = strtoupper(trim($validated['code']));
+        $validated['school_id'] = current_school_id();
 
         Subject::create($validated);
 

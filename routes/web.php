@@ -9,12 +9,16 @@ use App\Http\Controllers\GuruPortalController;
 use App\Http\Controllers\SchoolAnnouncementController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\SuperadminController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Redirect Root ke Dashboard masing-masing atau Login
 Route::get('/', function () {
     if (Auth::check()) {
+        if (Auth::user()->isSuperAdmin()) {
+            return redirect()->route('superadmin.dashboard');
+        }
         if (Auth::user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
@@ -163,3 +167,30 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('/informasi-sekolah/{id}/toggle', [SchoolAnnouncementController::class, 'toggleStatus'])->name('announcements.toggle');
     Route::delete('/informasi-sekolah/{id}', [SchoolAnnouncementController::class, 'destroy'])->name('announcements.destroy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| PORTAL SUPERADMINISTRATOR (Pusat Kendali Aplikasi Multi-Sekolah)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('superadmin.')->group(function () {
+    // Dashboard Utama Global
+    Route::get('/dashboard', [SuperadminController::class, 'dashboard'])->name('dashboard');
+
+    // Switcher Sekolah Aktif (Session Switch)
+    Route::post('/switch-school', [SuperadminController::class, 'switchSchool'])->name('switch_school');
+
+    // Manajemen Seluruh Sekolah
+    Route::get('/sekolah', [SuperadminController::class, 'schoolsIndex'])->name('schools.index');
+    Route::post('/sekolah', [SuperadminController::class, 'schoolsStore'])->name('schools.store');
+    Route::put('/sekolah/{id}', [SuperadminController::class, 'schoolsUpdate'])->name('schools.update');
+    Route::patch('/sekolah/{id}/toggle', [SuperadminController::class, 'schoolsToggle'])->name('schools.toggle');
+    Route::delete('/sekolah/{id}', [SuperadminController::class, 'schoolsDestroy'])->name('schools.destroy');
+
+    // Manajemen Admin Sekolah
+    Route::get('/admin-sekolah', [SuperadminController::class, 'adminsIndex'])->name('admins.index');
+    Route::post('/admin-sekolah', [SuperadminController::class, 'adminsStore'])->name('admins.store');
+    Route::put('/admin-sekolah/{id}', [SuperadminController::class, 'adminsUpdate'])->name('admins.update');
+    Route::delete('/admin-sekolah/{id}', [SuperadminController::class, 'adminsDestroy'])->name('admins.destroy');
+});
+

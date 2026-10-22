@@ -11,6 +11,7 @@ class AttendanceSetting extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'school_name',
         'foundation_name',
         'npsn',
@@ -32,6 +33,11 @@ class AttendanceSetting extends Model
         'wa_gateway_token',
         'wa_gateway_url',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     public function getLogoUrlAttribute(): string
     {
@@ -68,17 +74,40 @@ class AttendanceSetting extends Model
     }
 
     /**
-     * Dapatkan instance AttendanceSetting lengkap dengan jadwal harian hari ini
+     * Dapatkan instance AttendanceSetting lengkap dengan jadwal harian hari ini untuk sekolah aktif
      */
-    public static function getSettings()
+    public static function getSettings($schoolId = null)
     {
-        $setting = static::firstOrCreate([], [
-            'school_name' => 'Yayasan Barul Ulum',
+        if ($schoolId === null && function_exists('current_school_id')) {
+            $schoolId = current_school_id();
+        }
+
+        $school = $schoolId ? School::find($schoolId) : null;
+        $searchCriteria = $schoolId ? ['school_id' => $schoolId] : [];
+
+        $setting = static::firstOrCreate($searchCriteria, [
+            'school_id' => $schoolId,
+            'school_name' => $school ? $school->name : 'Sekolah',
+            'foundation_name' => $school ? $school->foundation_name : 'Yayasan',
+            'npsn' => $school ? $school->npsn : null,
+            'school_address' => $school ? $school->address : null,
+            'school_phone' => $school ? $school->phone : null,
+            'school_email' => $school ? $school->email : null,
+            'headmaster_name' => $school ? $school->headmaster_name : null,
+            'headmaster_nip' => $school ? $school->headmaster_nip : null,
+            'website' => $school ? $school->website : null,
+            'logo_path' => $school ? $school->logo_path : null,
             'time_in' => '07:00:00',
             'time_in_late_threshold' => '07:15:00',
             'time_out' => '14:30:00',
             'work_days' => 'Senin - Jumat',
+            'radius_meters' => 150,
+            'is_geofence_active' => true,
         ]);
+
+        if ($schoolId && !$setting->school_id) {
+            $setting->update(['school_id' => $schoolId]);
+        }
 
         // Pastikan 7 hari jadwal (Senin s/d Minggu) sudah terinisialisasi
         $setting->ensureDailySchedulesInitialized();

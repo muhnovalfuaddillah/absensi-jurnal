@@ -10,6 +10,7 @@ class SchoolAnnouncement extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'title',
         'category',
         'content',
@@ -20,6 +21,11 @@ class SchoolAnnouncement extends Model
         'badge_color',
         'is_active',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     protected $casts = [
         'date' => 'date',

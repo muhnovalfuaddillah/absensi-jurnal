@@ -11,6 +11,7 @@ class Attendance extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'teacher_id',
         'date',
         'time_in',
@@ -27,6 +28,11 @@ class Attendance extends Model
         'early_leave_minutes',
         'notes',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     public function getPhotoInUrlAttribute(): ?string
     {

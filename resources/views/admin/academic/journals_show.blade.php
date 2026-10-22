@@ -90,8 +90,14 @@
                     <strong class="text-on-surface">{{ $journal->date->format('d/m/Y') }}</strong>
                 </div>
                 <div class="flex justify-between">
-                    <span>Jam Pelajaran:</span>
+                    <span>Waktu Pembelajaran:</span>
                     <strong class="font-mono text-on-surface">{{ substr($journal->start_time, 0, 5) }} - {{ substr($journal->end_time, 0, 5) }} WIB</strong>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span>Durasi Jam Terhitung:</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-black bg-amber-50 text-amber-900 border border-amber-200/80">
+                        {{ $journal->duration_label }} ({{ $journal->estimated_hours }} JP)
+                    </span>
                 </div>
                 <div class="flex justify-between">
                     <span>Total Siswa:</span>

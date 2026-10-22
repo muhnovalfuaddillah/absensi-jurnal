@@ -10,10 +10,16 @@ class Subject extends Model
     use HasFactory;
 
     protected $fillable = [
+        'school_id',
         'code',
         'name',
         'description',
     ];
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
 
     public function lessonSchedules()
     {

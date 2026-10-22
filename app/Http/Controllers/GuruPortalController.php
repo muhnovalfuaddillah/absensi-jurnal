@@ -482,15 +482,53 @@ class GuruPortalController extends Controller
         $user = Auth::user();
         $teacher = $user->teacher;
 
+        if (!$teacher) {
+            return back()->with('error', 'Data profil guru tidak terhubung dengan akun Anda.');
+        }
+
         $request->validate([
+            'name' => 'required|string|max:255',
+            'gender' => 'required|in:L,P',
+            'nip' => 'nullable|string|max:50|unique:teachers,nip,' . $teacher->id,
+            'nuptk' => 'nullable|string|max:50',
+            'subject' => 'nullable|string|max:255',
+            'employment_status' => 'nullable|string|max:50',
+            'education' => 'nullable|string|max:50',
+            'class_duty' => 'nullable|string|max:100',
+            'birth_place' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date',
             'phone' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:255|unique:users,email,' . $user->id,
+            'address' => 'nullable|string|max:500',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'remove_photo' => 'nullable|boolean',
             'current_password' => 'nullable|required_with:new_password',
             'new_password' => 'nullable|min:6|confirmed',
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'gender.required' => 'Jenis kelamin wajib dipilih.',
+            'nip.unique' => 'NIP sudah digunakan oleh guru lain.',
+            'email.unique' => 'Alamat email ini sudah terdaftar untuk pengguna lain.',
+            'new_password.min' => 'Password baru minimal 6 karakter.',
+            'new_password.confirmed' => 'Konfirmasi password baru tidak cocok.',
+            'current_password.required_with' => 'Masukkan password saat ini jika ingin membuat password baru.',
         ]);
 
-        $updateData = [];
+        $updateData = [
+            'name' => $request->name,
+            'gender' => $request->gender,
+            'nip' => $request->nip,
+            'nuptk' => $request->nuptk,
+            'subject' => $request->subject,
+            'employment_status' => $request->employment_status,
+            'education' => $request->education,
+            'class_duty' => $request->class_duty,
+            'birth_place' => $request->birth_place,
+            'birth_date' => $request->birth_date,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'address' => $request->address,
+        ];
 
         // Upload Foto Profil Mandiri
         if ($request->hasFile('photo')) {
@@ -510,23 +548,23 @@ class GuruPortalController extends Controller
             $updateData['face_data'] = null;
         }
 
-        if ($request->has('phone')) {
-            $updateData['phone'] = $request->phone;
-        }
+        $teacher->update($updateData);
 
-        if (!empty($updateData)) {
-            $teacher->update($updateData);
+        // Sinkronisasi data ke user
+        $userUpdates = ['name' => $request->name];
+        if ($request->filled('email')) {
+            $userUpdates['email'] = $request->email;
         }
 
         if ($request->filled('new_password')) {
             if (!Hash::check($request->current_password, $user->password)) {
-                return back()->with('error', 'Password saat ini salah!');
+                return back()->with('error', 'Password saat ini yang Anda masukkan salah!');
             }
-            $user->update([
-                'password' => Hash::make($request->new_password),
-            ]);
+            $userUpdates['password'] = Hash::make($request->new_password);
         }
 
-        return back()->with('success', 'Data profil & foto berhasil diperbarui!');
+        $user->update($userUpdates);
+
+        return back()->with('success', 'Data profil guru Anda berhasil disimpan dan diperbarui!');
     }
 }

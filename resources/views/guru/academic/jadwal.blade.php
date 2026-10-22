@@ -75,8 +75,11 @@
                     <div class="p-4 bg-white text-slate-800 rounded-2xl border border-white/20 shadow-md flex flex-col gap-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex items-start gap-3 min-w-0">
-                                <div class="px-2.5 py-1.5 rounded-xl bg-[#eaf8ef] text-[#13793e] font-mono font-black text-xs shrink-0 mt-0.5 border border-emerald-200/60">
-                                    {{ $sch->formatted_time }}
+                                <div class="px-2.5 py-1.5 rounded-xl bg-[#eaf8ef] text-[#13793e] font-mono font-black text-xs shrink-0 mt-0.5 border border-emerald-200/60 text-center">
+                                    <div>{{ $sch->formatted_time }}</div>
+                                    <div class="text-[10px] font-bold text-amber-800 bg-amber-100/70 rounded px-1.5 py-0.5 mt-1 border border-amber-200/50">
+                                        {{ $sch->duration_label }}
+                                    </div>
                                 </div>
                                 <div class="min-w-0">
                                     <h3 class="text-sm font-black text-slate-900 leading-tight truncate">
@@ -169,7 +172,7 @@
                             @endif
                         </div>
                         <span class="text-[11px] text-slate-500 font-semibold">
-                            {{ $daySchedules->count() }} Jam Pelajaran
+                            {{ $daySchedules->count() }} Sesi ({{ $daySchedules->sum('estimated_hours') }} JP)
                         </span>
                     </div>
 
@@ -182,9 +185,14 @@
                             @foreach($daySchedules as $item)
                                 <div class="px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-slate-50/50 transition-colors">
                                     <div class="flex items-center gap-3">
-                                        <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-xl">
-                                            {{ substr($item->start_time, 0, 5) }} - {{ substr($item->end_time, 0, 5) }}
-                                        </span>
+                                        <div class="shrink-0 text-center min-w-[85px]">
+                                            <span class="block font-mono text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">
+                                                {{ substr($item->start_time, 0, 5) }} - {{ substr($item->end_time, 0, 5) }}
+                                            </span>
+                                            <span class="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200/70">
+                                                {{ $item->duration_label }}
+                                            </span>
+                                        </div>
                                         <div>
                                             <p class="font-extrabold text-xs text-slate-900 leading-tight">{{ $item->subject->name ?? 'Mapel' }}</p>
                                             <p class="text-[11px] text-slate-400 font-medium">{{ $item->schoolClass->name ?? 'Kelas' }} {{ $item->room ? '• ' . $item->room : '' }}</p>

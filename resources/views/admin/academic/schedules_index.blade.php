@@ -90,8 +90,16 @@
                         @foreach($schedules as $s)
                             <tr class="hover:bg-surface-container-low/50 transition-colors">
                                 <td class="py-3 px-space-md">
-                                    <span class="px-2 py-0.5 rounded font-bold text-[11px] bg-primary/10 text-primary mr-1.5">{{ $s->day }}</span>
-                                    <span class="font-mono text-slate-600 font-semibold">{{ $s->formatted_time }} WIB</span>
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="px-2 py-0.5 rounded font-bold text-[11px] bg-primary/10 text-primary">{{ $s->day }}</span>
+                                        <span class="font-mono text-slate-700 font-bold text-xs">{{ $s->formatted_time }} WIB</span>
+                                    </div>
+                                    <div class="mt-1 flex items-center gap-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs">
+                                            <span class="material-symbols-outlined text-[13px] text-amber-600">schedule</span>
+                                            <span>{{ $s->duration_label }} ({{ $s->estimated_hours }} JP)</span>
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="py-3 px-space-md font-bold text-on-surface">
                                     {{ $s->schoolClass->name ?? '-' }}
@@ -195,20 +203,27 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Jam Mulai <span class="text-rose-500">*</span></label>
-                    <input type="time" name="start_time" value="07:30" required class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                    <input type="time" name="start_time" id="addStartTime" value="07:30" required onchange="autoCalculateAddHours()" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Jam Selesai <span class="text-rose-500">*</span></label>
-                    <input type="time" name="end_time" value="09:00" required class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                    <input type="time" name="end_time" id="addEndTime" value="09:00" required onchange="autoCalculateAddHours()" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-on-surface mb-1">Berapa Jam (JP) <span class="text-rose-500">*</span></label>
+                    <input type="number" name="total_hours" id="addTotalHours" value="2" min="1" max="10" required placeholder="Contoh: 2" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-bold text-emerald-800">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Ruangan</label>
-                    <input type="text" name="room" placeholder="Contoh: R. 7A / Lab" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary">
+                    <input type="text" name="room" placeholder="Contoh: R. 7A" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary">
                 </div>
             </div>
+            <p class="text-[11px] text-slate-500 -mt-1">
+                Keterangan: Total jam tatap muka untuk jadwal ini (contoh: <b>2 jam mata pelajaran</b> / 2 JP).
+            </p>
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-surface-container">
                 <button type="button" onclick="closeAddScheduleModal()" class="px-4 py-2 bg-surface-container text-on-surface-variant rounded-lg text-xs font-semibold hover:bg-surface-container-high">Batal</button>
@@ -272,20 +287,27 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Jam Mulai</label>
-                    <input type="time" name="start_time" id="editStartTime" required class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                    <input type="time" name="start_time" id="editStartTime" required onchange="autoCalculateEditHours()" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Jam Selesai</label>
-                    <input type="time" name="end_time" id="editEndTime" required class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                    <input type="time" name="end_time" id="editEndTime" required onchange="autoCalculateEditHours()" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-mono">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-on-surface mb-1">Berapa Jam (JP)</label>
+                    <input type="number" name="total_hours" id="editTotalHours" min="1" max="10" required placeholder="Contoh: 2" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary font-bold text-emerald-800">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-on-surface mb-1">Ruangan</label>
                     <input type="text" name="room" id="editRoom" class="w-full py-2 px-3 text-xs rounded-lg bg-surface-container-low border border-surface-container-high focus:outline-none focus:border-primary">
                 </div>
             </div>
+            <p class="text-[11px] text-slate-500 -mt-1">
+                Keterangan: Total jam tatap muka untuk jadwal ini (contoh: <b>2 jam mata pelajaran</b> / 2 JP).
+            </p>
 
             <div class="pt-2 flex items-center justify-end gap-2 border-t border-surface-container">
                 <button type="button" onclick="closeEditScheduleModal()" class="px-4 py-2 bg-surface-container text-on-surface-variant rounded-lg text-xs font-semibold hover:bg-surface-container-high">Batal</button>
@@ -296,8 +318,30 @@
 </div>
 
 <script>
+    function calcJP(startStr, endStr) {
+        if (!startStr || !endStr) return 1;
+        const [sh, sm] = startStr.split(':').map(Number);
+        const [eh, em] = endStr.split(':').map(Number);
+        const diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff <= 0) return 1;
+        return Math.max(1, Math.round(diff / 45));
+    }
+
+    function autoCalculateAddHours() {
+        const s = document.getElementById('addStartTime').value;
+        const e = document.getElementById('addEndTime').value;
+        document.getElementById('addTotalHours').value = calcJP(s, e);
+    }
+
+    function autoCalculateEditHours() {
+        const s = document.getElementById('editStartTime').value;
+        const e = document.getElementById('editEndTime').value;
+        document.getElementById('editTotalHours').value = calcJP(s, e);
+    }
+
     function openAddScheduleModal() {
         document.getElementById('addScheduleModal').classList.remove('hidden');
+        autoCalculateAddHours();
     }
     function closeAddScheduleModal() {
         document.getElementById('addScheduleModal').classList.add('hidden');
@@ -311,6 +355,7 @@
         document.getElementById('editTeacherId').value = s.teacher_id;
         document.getElementById('editStartTime').value = s.start_time.substring(0, 5);
         document.getElementById('editEndTime').value = s.end_time.substring(0, 5);
+        document.getElementById('editTotalHours').value = s.total_hours || s.estimated_hours || calcJP(s.start_time, s.end_time);
         document.getElementById('editRoom').value = s.room || '';
         document.getElementById('editScheduleModal').classList.remove('hidden');
     }

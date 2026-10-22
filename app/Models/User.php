@@ -18,6 +18,7 @@ class User extends Authenticatable
         'username',
         'password',
         'role',
+        'school_id',
         'teacher_id',
     ];
 
@@ -34,12 +35,27 @@ class User extends Authenticatable
         ];
     }
 
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function teacher()
     {
         return $this->belongsTo(Teacher::class);
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'superadmin';
+    }
+
     public function isAdmin(): bool
+    {
+        return in_array($this->role, ['admin', 'superadmin']);
+    }
+
+    public function isSchoolAdmin(): bool
     {
         return $this->role === 'admin';
     }

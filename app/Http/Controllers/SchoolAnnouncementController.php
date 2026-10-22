@@ -14,14 +14,16 @@ class SchoolAnnouncementController extends Controller
      */
     public function index()
     {
-        $setting = AttendanceSetting::getSettings();
-        $announcements = SchoolAnnouncement::orderBy('is_active', 'desc')
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
+        $announcements = SchoolAnnouncement::where('school_id', $schoolId)
+            ->orderBy('is_active', 'desc')
             ->orderBy('date', 'desc')
             ->orderBy('id', 'desc')
             ->paginate(15);
 
-        $totalActive = SchoolAnnouncement::where('is_active', true)->count();
-        $totalAll = SchoolAnnouncement::count();
+        $totalActive = SchoolAnnouncement::where('school_id', $schoolId)->where('is_active', true)->count();
+        $totalAll = SchoolAnnouncement::where('school_id', $schoolId)->count();
 
         return view('admin.announcements.index', compact('announcements', 'setting', 'totalActive', 'totalAll'));
     }
@@ -55,6 +57,7 @@ class SchoolAnnouncementController extends Controller
         };
 
         SchoolAnnouncement::create([
+            'school_id' => current_school_id(),
             'title' => $validated['title'],
             'category' => $validated['category'],
             'content' => $validated['content'],

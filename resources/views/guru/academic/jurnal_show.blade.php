@@ -78,6 +78,11 @@
                     <span>{{ substr($journal->start_time, 0, 5) }} - {{ substr($journal->end_time, 0, 5) }} WIB</span>
                 </span>
                 <span>•</span>
+                <span class="inline-flex items-center gap-1.5 bg-white/20 text-white font-bold px-2.5 py-0.5 rounded-full text-[11px] border border-white/20 shadow-2xs">
+                    <i class="fa-solid fa-hourglass-half text-[10px]"></i>
+                    <span>{{ $journal->duration_label }} ({{ $journal->estimated_hours }} JP)</span>
+                </span>
+                <span>•</span>
                 <span class="inline-flex items-center gap-1.5">
                     <i class="fa-solid fa-chalkboard-user text-[11px]"></i>
                     <span>Pengampu: <b>{{ $journal->teacher->name }}</b></span>

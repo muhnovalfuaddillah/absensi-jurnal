@@ -16,11 +16,13 @@ class AttendanceController extends Controller
     public function kiosk(Request $request)
     {
         $today = now()->toDateString();
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         $search = $request->input('search');
 
-        $teachersQuery = Teacher::active()
+        $teachersQuery = Teacher::where('school_id', $schoolId)
+            ->active()
             ->with(['attendances' => function ($q) use ($today) {
                 $q->where('date', $today);
             }])
@@ -37,8 +39,8 @@ class AttendanceController extends Controller
         $teachers = $teachersQuery->get();
 
         // Hitung statistik hari ini
-        $totalTeachers = Teacher::active()->count();
-        $todayAttendances = Attendance::where('date', $today)->get();
+        $totalTeachers = Teacher::where('school_id', $schoolId)->active()->count();
+        $todayAttendances = Attendance::where('school_id', $schoolId)->where('date', $today)->get();
         $hadirCount = $todayAttendances->where('status', 'hadir')->count();
         $terlambatCount = $todayAttendances->where('status', 'terlambat')->count();
         $izinSakitCount = $todayAttendances->whereIn('status', ['izin', 'sakit'])->count();
@@ -120,6 +122,7 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
+            'school_id' => $teacher->school_id ?: current_school_id(),
             'teacher_id' => $teacher->id,
             'date' => $today,
             'time_in' => $now->format('H:i:s'),
@@ -197,8 +200,10 @@ class AttendanceController extends Controller
         $selectedDate = $request->input('date', now()->toDateString());
         $statusFilter = $request->input('status');
         $search = $request->input('search');
+        $schoolId = current_school_id();
 
-        $query = Attendance::with('teacher')
+        $query = Attendance::where('school_id', $schoolId)
+            ->with('teacher')
             ->where('date', $selectedDate)
             ->orderBy('time_in', 'asc');
 
@@ -216,8 +221,8 @@ class AttendanceController extends Controller
         $attendances = $query->paginate(20)->withQueryString();
 
         // Statistik pada tanggal terpilih
-        $totalTeachers = Teacher::active()->count();
-        $dateAttendances = Attendance::where('date', $selectedDate)->get();
+        $totalTeachers = Teacher::where('school_id', $schoolId)->active()->count();
+        $dateAttendances = Attendance::where('school_id', $schoolId)->where('date', $selectedDate)->get();
         $hadirCount = $dateAttendances->where('status', 'hadir')->count();
         $terlambatCount = $dateAttendances->where('status', 'terlambat')->count();
         $izinCount = $dateAttendances->where('status', 'izin')->count();
@@ -226,8 +231,8 @@ class AttendanceController extends Controller
         $totalHadir = $hadirCount + $terlambatCount;
         $belumAbsen = max(0, $totalTeachers - $dateAttendances->count());
 
-        $teachers = Teacher::active()->orderBy('name')->get();
-        $setting = AttendanceSetting::getSettings();
+        $teachers = Teacher::where('school_id', $schoolId)->active()->orderBy('name')->get();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         return view('attendance.index', compact(
             'attendances',
@@ -261,7 +266,8 @@ class AttendanceController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
         $lateMinutes = 0;
 
         if (in_array($request->status, ['hadir', 'terlambat']) && $request->filled('time_in')) {
@@ -281,6 +287,7 @@ class AttendanceController extends Controller
                 'date' => $request->date,
             ],
             [
+                'school_id' => $schoolId,
                 'time_in' => $request->filled('time_in') ? $request->time_in . ':00' : null,
                 'time_out' => $request->filled('time_out') ? $request->time_out . ':00' : null,
                 'status' => $request->status,
@@ -332,12 +339,13 @@ class AttendanceController extends Controller
     {
         $startDate = Carbon::parse($month . '-01')->startOfMonth()->toDateString();
         $endDate = Carbon::parse($month . '-01')->endOfMonth()->toDateString();
+        $schoolId = current_school_id();
 
-        $teachers = Teacher::active()->orderBy('name')->get();
-        $setting = AttendanceSetting::getSettings();
+        $teachers = Teacher::where('school_id', $schoolId)->active()->orderBy('name')->get();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         // Ambil data absensi di bulan ini
-        $attendances = Attendance::whereBetween('date', [$startDate, $endDate])->get();
+        $attendances = Attendance::where('school_id', $schoolId)->whereBetween('date', [$startDate, $endDate])->get();
 
         // Rekap per guru
         $recapData = $teachers->map(function ($teacher) use ($attendances) {

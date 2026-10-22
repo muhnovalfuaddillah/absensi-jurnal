@@ -72,6 +72,10 @@ class AuthController extends Controller
             Auth::login($user, $remember);
             $request->session()->regenerate();
 
+            if ($user->isSuperAdmin()) {
+                return redirect()->route('superadmin.dashboard')->with('success', "Selamat datang di Panel Pusat, {$user->name}!");
+            }
+
             if ($user->isAdmin()) {
                 return redirect()->route('admin.dashboard')->with('success', "Selamat datang kembali, {$user->name} (Administrator)!");
             }

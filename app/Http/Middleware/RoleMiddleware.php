@@ -22,11 +22,19 @@ class RoleMiddleware
 
         $user = Auth::user();
 
+        // Superadmin memiliki wewenang penuh pada portal admin dan superadmin
+        if ($user->isSuperAdmin()) {
+            if (in_array('guru', $roles) && !in_array('admin', $roles) && !in_array('superadmin', $roles)) {
+                return redirect()->route('admin.dashboard')->with('info', 'Superadmin diarahkan ke Dashboard Manajemen.');
+            }
+            return $next($request);
+        }
+
         if (!in_array($user->role, $roles)) {
             if ($user->role === 'guru') {
                 return redirect()->route('guru.dashboard')->with('error', 'Akses ditolak! Anda hanya diizinkan mengakses Portal Guru.');
             } else {
-                return redirect()->route('admin.dashboard')->with('error', 'Akses ditolak! Halaman ini khusus untuk Portal Guru.');
+                return redirect()->route('admin.dashboard')->with('error', 'Akses ditolak!');
             }
         }
 
