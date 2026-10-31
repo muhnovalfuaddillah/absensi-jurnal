@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>@yield('title', 'Terjadi Kendala Sistem') - HadirGuru</title>
+    <title>@yield('title', 'Terjadi Kendala Sistem') - SIMPRES BU</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,12 +77,12 @@
         try {
             $setting = \App\Models\AttendanceSetting::getSettings();
             $schoolName = $setting->school_name ?: 'Madrasah';
-            $foundation = $setting->foundation_name ?: 'HadirGuru Presensi';
+            $foundation = $setting->foundation_name ?: 'Yayasan Bahrul Ulum';
             $logoUrl = $setting->logo_url ?: asset('logo.jpg');
             $rawPhone = $setting->school_phone ?: '081234567890';
         } catch (\Throwable $e) {
             $schoolName = 'Madrasah';
-            $foundation = 'HadirGuru Presensi';
+            $foundation = 'Yayasan Bahrul Ulum';
             $logoUrl = asset('logo.jpg');
             $rawPhone = '081234567890';
         }
@@ -98,7 +98,7 @@
 
         $statusCode = View::yieldContent('code', '500');
         $statusTitle = View::yieldContent('title', 'Terjadi Kendala Sistem');
-        $waMessage = "Halo Tim IT Madrasah, saya mengalami kendala pada aplikasi Presensi HadirGuru dengan kode error: " . $statusCode . " (" . $statusTitle . "). Mohon bantuannya.";
+        $waMessage = "Halo Tim IT Madrasah, saya mengalami kendala pada aplikasi SIMPRES BU dengan kode error: " . $statusCode . " (" . $statusTitle . "). Mohon bantuannya.";
     @endphp
 
     <!-- Decorative Top Bar -->
@@ -199,7 +199,7 @@
 
             <!-- Page Footer Note -->
             <div class="text-center mt-5 text-[11px] text-slate-400 font-medium">
-                <p>&copy; {{ date('Y') }} {{ $schoolName }} &bull; HadirGuru Presensi Digital</p>
+                <p>&copy; {{ date('Y') }} {{ $schoolName }} &bull; SIMPRES BU (Sistem Informasi Manajemen Presensi Bahrul Ulum)</p>
             </div>
 
         </div>

@@ -36,6 +36,11 @@
                     <span class="material-symbols-outlined text-[18px]">person_add</span>
                     <span>Kelola Admin Sekolah</span>
                 </a>
+                <a href="{{ route('superadmin.settings.index') }}" 
+                   class="px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-900/20 transition-all hover:scale-[1.02] active:scale-95">
+                    <span class="material-symbols-outlined text-[18px]">palette</span>
+                    <span>Logo & Identitas Yayasan</span>
+                </a>
             </div>
         </div>
     </div>

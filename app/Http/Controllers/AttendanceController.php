@@ -21,10 +21,13 @@ class AttendanceController extends Controller
 
         $search = $request->input('search');
 
-        $teachersQuery = Teacher::where('school_id', $schoolId)
-            ->active()
-            ->with(['attendances' => function ($q) use ($today) {
-                $q->where('date', $today);
+        $teachersQuery = Teacher::active()
+            ->where(function ($q) use ($schoolId) {
+                $q->where('school_id', $schoolId)
+                  ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+            })
+            ->with(['attendances' => function ($q) use ($today, $schoolId) {
+                $q->where('date', $today)->where('school_id', $schoolId);
             }])
             ->orderBy('name');
 
@@ -39,7 +42,11 @@ class AttendanceController extends Controller
         $teachers = $teachersQuery->get();
 
         // Hitung statistik hari ini
-        $totalTeachers = Teacher::where('school_id', $schoolId)->active()->count();
+        $totalTeachers = Teacher::active()
+            ->where(function ($q) use ($schoolId) {
+                $q->where('school_id', $schoolId)
+                  ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+            })->count();
         $todayAttendances = Attendance::where('school_id', $schoolId)->where('date', $today)->get();
         $hadirCount = $todayAttendances->where('status', 'hadir')->count();
         $terlambatCount = $todayAttendances->where('status', 'terlambat')->count();
@@ -122,7 +129,7 @@ class AttendanceController extends Controller
         }
 
         Attendance::create([
-            'school_id' => $teacher->school_id ?: current_school_id(),
+            'school_id' => current_school_id(),
             'teacher_id' => $teacher->id,
             'date' => $today,
             'time_in' => $now->format('H:i:s'),
@@ -151,8 +158,10 @@ class AttendanceController extends Controller
         $teacher = Teacher::findOrFail($request->teacher_id);
         $today = now()->toDateString();
         $now = now();
+        $schoolId = current_school_id();
 
         $attendance = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $today)
             ->first();
 

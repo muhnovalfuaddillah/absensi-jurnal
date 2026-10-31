@@ -40,25 +40,29 @@ class GuruAcademicController extends Controller
     public function jadwal(Request $request)
     {
         $teacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
         $todayDay = $this->getIndonesianDayName();
         $todayDate = now()->toDateString();
 
-        // Jadwal Hari Ini
+        // Jadwal Hari Ini di Sekolah Aktif
         $todaySchedules = LessonSchedule::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('day', $todayDay)
             ->orderBy('start_time')
             ->get();
 
         // Cek jurnal yang sudah dibuat hari ini untuk jadwal terkait
         $todayJournals = TeachingJournal::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $todayDate)
             ->pluck('id', 'lesson_schedule_id')
             ->toArray();
 
-        // Seluruh Jadwal Mingguan
+        // Seluruh Jadwal Mingguan di Sekolah Aktif
         $allSchedules = LessonSchedule::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->orderByRaw("FIELD(day, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')")
             ->orderBy('start_time')
             ->get()
@@ -73,12 +77,14 @@ class GuruAcademicController extends Controller
     public function laporanIzinGuru(Request $request)
     {
         $currentTeacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
         $date = $request->input('date', now()->toDateString());
         $carbonDate = Carbon::parse($date);
         $dayName = $this->getIndonesianDayName($date);
 
-        // Ambil semua presensi guru dengan status izin atau sakit pada tanggal terpilih
+        // Ambil semua presensi guru dengan status izin atau sakit pada tanggal terpilih di sekolah ini
         $absences = Attendance::with('teacher')
+            ->where('school_id', $schoolId)
             ->where('date', $date)
             ->whereIn('status', ['izin', 'sakit'])
             ->get();
@@ -87,6 +93,7 @@ class GuruAcademicController extends Controller
 
         // Ambil seluruh jadwal mengajar guru yang izin/sakit pada hari tersebut
         $schedules = LessonSchedule::with(['subject', 'schoolClass', 'teacher'])
+            ->where('school_id', $schoolId)
             ->whereIn('teacher_id', $absentTeacherIds)
             ->where('day', $dayName)
             ->orderBy('start_time')
@@ -95,6 +102,7 @@ class GuruAcademicController extends Controller
         // Ambil jurnal yang sudah terisi untuk jadwal-jadwal tersebut pada tanggal ini
         $scheduleIds = $schedules->pluck('id');
         $filledJournals = TeachingJournal::with(['teacher', 'substitutedTeacher'])
+            ->where('school_id', $schoolId)
             ->whereIn('lesson_schedule_id', $scheduleIds)
             ->where('date', $date)
             ->get()
@@ -136,11 +144,13 @@ class GuruAcademicController extends Controller
     public function jurnalIndex(Request $request)
     {
         $teacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
         $search = $request->input('search');
         $classId = $request->input('class_id');
         $month = $request->input('month', now()->format('Y-m'));
 
         $query = TeachingJournal::with(['schoolClass', 'subject', 'studentAttendances', 'teacher', 'substitutedTeacher', 'lessonSchedule'])
+            ->where('school_id', $schoolId)
             ->where(function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id)
                   ->orWhere('substituted_teacher_id', $teacher->id);
@@ -167,10 +177,11 @@ class GuruAcademicController extends Controller
         }
 
         $journals = $query->paginate(12)->withQueryString();
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
 
         // Statistik ringkas pertemuan dan total jam mengajar yang telah digunakan bulan ini
         $monthJournals = TeachingJournal::with('lessonSchedule')
+            ->where('school_id', $schoolId)
             ->where(function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id)
                   ->orWhere('substituted_teacher_id', $teacher->id);
@@ -340,8 +351,9 @@ class GuruAcademicController extends Controller
             $selectedClassId = $request->input('class_id');
         }
 
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
-        $subjects = Subject::orderBy('name')->get();
+        $schoolId = current_school_id();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $subjects = Subject::where('school_id', $schoolId)->orderBy('name')->get();
 
         // Default kelas pertama jika belum dipilih
         if (!$selectedClassId && $classes->isNotEmpty()) {
@@ -375,8 +387,15 @@ class GuruAcademicController extends Controller
             ? Student::where('class_id', $selectedClassId)->where('is_active', true)->orderBy('name')->get()
             : collect();
 
-        // Daftar guru lain untuk pilihan Guru Pengganti (Inval)
-        $otherTeachers = Teacher::where('is_active', true)->where('id', '!=', $teacher->id)->orderBy('name')->get();
+        // Daftar guru lain untuk pilihan Guru Pengganti (Inval) di sekolah ini
+        $otherTeachers = Teacher::where('is_active', true)
+            ->where('id', '!=', $teacher->id)
+            ->where(function($q) use ($schoolId) {
+                $q->where('school_id', $schoolId)
+                  ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+            })
+            ->orderBy('name')
+            ->get();
 
         $todayDay = $this->getIndonesianDayName();
 
@@ -525,6 +544,7 @@ class GuruAcademicController extends Controller
         try {
             // 1. Simpan Jurnal (Dapat sebagai Guru Pengampu Utama atau Guru Pengganti / Inval)
             $journal = TeachingJournal::create([
+                'school_id' => $class->school_id ?: current_school_id(),
                 'teacher_id' => $teacher->id,
                 'is_substitute' => $isSubstitute,
                 'substituted_teacher_id' => $substitutedTeacherId,
@@ -636,7 +656,8 @@ class GuruAcademicController extends Controller
     public function absenSiswaIndex(Request $request)
     {
         $teacher = Auth::user()->teacher;
-        $classes = SchoolClass::where('is_active', true)->orderBy('name')->get();
+        $schoolId = current_school_id();
+        $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
         $selectedClassId = $request->input('class_id', $classes->first()?->id);
         $month = $request->input('month', now()->format('Y-m'));
 

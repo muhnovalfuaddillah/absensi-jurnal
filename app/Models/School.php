@@ -96,6 +96,13 @@ class School extends Model
         return $this->hasMany(Teacher::class);
     }
 
+    public function assignedTeachers()
+    {
+        return $this->belongsToMany(Teacher::class, 'school_teacher')
+            ->withPivot('is_primary', 'subject', 'class_duty')
+            ->withTimestamps();
+    }
+
     public function classes()
     {
         return $this->hasMany(SchoolClass::class);

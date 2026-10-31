@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E–Presensi {{ $setting->school_name ?? 'MTS SYAFIIYAH' }} - Portal Presensi</title>
+    <title>SIMPRES BU - Sistem Informasi Manajemen Presensi Bahrul Ulum</title>
     
     <link rel="icon" type="image/png" href="{{ asset('icon-192.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('icon-192.png') }}">
@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="E-Presensi">
+    <meta name="apple-mobile-web-app-title" content="SIMPRES BU">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,18 +59,8 @@
     </div>
 
     @php
-        $schoolTitle = $setting->school_name ?? 'MTS SYAFIIYAH';
-        $foundation = $setting->foundation_name ?? 'Yayasan Barul Ulum';
-        
-        $timeIn = '07.00';
-        $timeThreshold = '07.15';
-        if (isset($todaySchedule) && $todaySchedule && $todaySchedule->is_active) {
-            $timeIn = \Carbon\Carbon::parse($todaySchedule->time_in)->format('H.i');
-            $timeThreshold = \Carbon\Carbon::parse($todaySchedule->time_in_late_threshold)->format('H.i');
-        } elseif (isset($setting) && $setting->time_in) {
-            $timeIn = \Carbon\Carbon::parse($setting->time_in)->format('H.i');
-            $timeThreshold = \Carbon\Carbon::parse($setting->time_in_late_threshold)->format('H.i');
-        }
+        $foundation = $setting->foundation_name ?? 'Yayasan Bahrul Ulum';
+        $appName = $setting->school_name ?? 'SIMPRES BU';
 
         $waNumber = preg_replace('/[^0-9]/', '', $setting->school_phone ?? '089629615301');
         if (str_starts_with($waNumber, '0')) {
@@ -85,18 +75,25 @@
             <!-- Circular Logo Badge -->
             <div class="relative inline-flex items-center justify-center mb-3.5">
                 <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white p-2 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.08)] border border-slate-100 flex items-center justify-center">
-                    <img src="{{ $setting->logo_url }}" alt="Logo {{ $schoolTitle }}" class="w-full h-full object-contain rounded-full" onerror="this.onerror=null;this.src='{{ asset('logo.jpg') }}';">
+                    <img src="{{ $setting->logo_url }}" alt="Logo {{ $foundation }}" class="w-full h-full object-contain rounded-full" onerror="this.onerror=null;this.src='{{ asset('logo.jpg') }}';">
                 </div>
                 <!-- Status Green Indicator Dot -->
                 <span class="w-4 h-4 rounded-full bg-[#13793e] border-2 border-white absolute bottom-1 right-1 shadow-sm"></span>
             </div>
 
             <!-- Main Heading -->
-            <h1 class="text-2xl sm:text-[26px] font-extrabold text-slate-900 tracking-tight">
-                E–Presensi {{ $schoolTitle }}
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[#13793e] font-extrabold text-[11px] tracking-wider mb-2 uppercase">
+                <i class="fa-solid fa-building-columns text-[10px]"></i>
+                {{ $foundation }}
+            </div>
+            <h1 class="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight">
+                {{ $appName }}
             </h1>
-            <p class="text-xs sm:text-[13px] text-slate-500 font-medium mt-1 leading-snug">
-                {{ $foundation }} • Sistem Presensi Guru & Karyawan
+            <p class="text-xs sm:text-[13px] font-bold text-emerald-800 mt-1">
+                Sistem Informasi Manajemen Presensi Bahrul Ulum
+            </p>
+            <p class="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5 leading-snug">
+                Portal Presensi & Jurnal Mengajar Guru Terpadu
             </p>
         </div>
 
@@ -118,14 +115,26 @@
         <!-- White Card Container -->
         <div class="bg-white rounded-3xl p-5 sm:p-7 shadow-[0_12px_35px_-8px_rgba(20,40,90,0.06)] border border-slate-100">
 
-            <!-- Jadwal Shift Pagi Info Box -->
-            <div class="bg-[#e8f7ee] border border-[#c4ebd1] rounded-2xl p-3 flex items-center justify-between mb-4">
-                <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
-                    <i class="fa-regular fa-clock text-[#13793e] text-sm"></i>
-                    <span>Jadwal Shift Pagi: <span class="font-medium text-slate-600">{{ $timeIn }} - {{ $timeThreshold }} WIB</span></span>
+            <!-- Multi-School Units Badge Banner -->
+            <div class="bg-gradient-to-r from-emerald-50 via-[#ecfbf2] to-teal-50 border border-emerald-200/80 rounded-2xl p-3 flex items-center justify-between mb-4 shadow-2xs">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600/10 text-[#13793e] flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-school text-xs"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-extrabold text-[#13793e] uppercase tracking-wide">Layanan Presensi Terpadu</div>
+                        <div class="text-[11px] text-slate-600 font-medium">
+                            @if(isset($schools) && $schools->count() > 0)
+                                {{ $schools->pluck('name')->implode(' • ') }}
+                            @else
+                                MTs Syafiiyah &bull; MA Bahrul Ulum
+                            @endif
+                        </div>
+                    </div>
                 </div>
-                <span class="px-2 py-0.5 rounded-md bg-white text-[#13793e] font-extrabold text-[10px] tracking-wider border border-[#b8e4c7] shadow-2xs">
-                    SESI AKTIF
+                <span class="px-2 py-0.5 rounded-md bg-white text-[#13793e] font-extrabold text-[10px] tracking-wider border border-emerald-200 shadow-2xs flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    AKTIF
                 </span>
             </div>
 
@@ -224,10 +233,10 @@
                 </div>
                 <div>
                     <h4 class="font-extrabold text-xs text-slate-800 leading-tight">Kendala Login / Presensi?</h4>
-                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Tim Layanan Madrasah siap membantu 24/7</p>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Bantuan Tim IT {{ $foundation }}</p>
                 </div>
             </div>
-            <a href="https://wa.me/{{ $waNumber }}?text=Halo%20Admin%20Madrasah,%20saya%20mengalami%20kendala%20saat%20login%20ke%20aplikasi%20Presensi%20{{ urlencode($schoolTitle) }}." 
+            <a href="https://wa.me/{{ $waNumber }}?text=Halo%20Admin,%20saya%20mengalami%20kendala%20saat%20login%20ke%20aplikasi%20{{ urlencode($appName) }}." 
                target="_blank"
                class="px-3 py-1.5 sm:py-2 rounded-xl bg-[#13793e] hover:bg-[#0f6332] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all shrink-0">
                 <span>Chat WA</span>
@@ -237,8 +246,8 @@
 
         <!-- Footer Copyright -->
         <div class="text-center mt-5 text-[11px] text-slate-400 font-medium leading-relaxed">
-            <p>© {{ date('Y') }} {{ $schoolTitle }} - {{ $foundation }}. Seluruh Hak Cipta Dilindungi.</p>
-            <p class="text-slate-400/80">Infrastruktur Kepegawaian & Presensi Berbasis Digital.</p>
+            <p>© {{ date('Y') }} {{ $foundation }} - {{ $appName }}. Seluruh Hak Cipta Dilindungi.</p>
+            <p class="text-slate-400/80">Infrastruktur Kepegawaian & Presensi Terpadu Berbasis Digital.</p>
         </div>
 
     </div>
@@ -315,10 +324,10 @@
             </div>
             <h3 class="font-extrabold text-base text-slate-900 mb-1">Reset Kata Sandi</h3>
             <p class="text-xs text-slate-500 leading-relaxed mb-4">
-                Untuk keamanan akun, permohonan reset password dilayani langsung oleh Tim Layanan Madrasah.
+                Untuk keamanan akun, permohonan reset password dilayani langsung oleh Tim Layanan IT {{ $foundation }}.
             </p>
 
-            <a href="https://wa.me/{{ $waNumber }}?text=Halo%20Admin%20Madrasah,%20saya%20lupa%20kata%20sandi%20akun%20presensi%20{{ urlencode($schoolTitle) }}.%20Mohon%20bantuan%20reset." 
+            <a href="https://wa.me/{{ $waNumber }}?text=Halo%20Admin,%20saya%20lupa%20kata%20sandi%20akun%20presensi%20{{ urlencode($appName) }}%20({{ urlencode($foundation) }}).%20Mohon%20bantuan%20reset." 
                target="_blank"
                class="w-full py-3 px-4 rounded-xl bg-[#13793e] hover:bg-[#0f6332] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-800/20">
                 <i class="fa-brands fa-whatsapp text-sm"></i>

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Profil Administrator & Kontak Tim IT - HadirGuru')
+@section('title', 'Profil Administrator & Kontak Tim IT - SIMPRES BU')
 
 @section('content')
 <div class="flex flex-col gap-space-md">

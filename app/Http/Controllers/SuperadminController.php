@@ -386,4 +386,94 @@ class SuperadminController extends Controller
 
         return back()->with('success', "Akun admin \"{$name}\" berhasil dihapus.");
     }
+
+    /**
+     * Halaman Pengaturan Identitas Yayasan & Logo Login Portal
+     */
+    public function settingsIndex()
+    {
+        $setting = AttendanceSetting::getGlobalSetting();
+        $schools = School::withCount(['teachers', 'students'])->orderBy('name')->get();
+
+        return view('superadmin.settings', compact('setting', 'schools'));
+    }
+
+    /**
+     * Simpan Pengaturan Identitas Yayasan & Logo Login Portal
+     */
+    public function settingsUpdate(Request $request)
+    {
+        $setting = AttendanceSetting::getGlobalSetting();
+
+        $request->validate([
+            'school_name' => 'required|string|max:150',
+            'foundation_name' => 'required|string|max:150',
+            'school_phone' => 'nullable|string|max:50',
+            'school_email' => 'nullable|email|max:100',
+            'website' => 'nullable|string|max:150',
+            'school_address' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:4096',
+        ]);
+
+        $updateData = [
+            'school_name' => $request->school_name,
+            'foundation_name' => $request->foundation_name,
+            'school_phone' => $request->school_phone,
+            'school_email' => $request->school_email,
+            'website' => $request->website,
+            'school_address' => $request->school_address,
+        ];
+
+        // Handle upload logo baru
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            $dir = public_path('uploads/logo');
+            if (!file_exists($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $filename = 'login_portal_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($dir, $filename);
+            $updateData['logo_path'] = 'uploads/logo/' . $filename;
+
+            // Sinkronkan juga ke public/logo.jpg
+            $targetPath = $dir . DIRECTORY_SEPARATOR . $filename;
+            @copy($targetPath, public_path('logo.jpg'));
+
+            // Generate icon PWA (192 & 512) jika GD aktif
+            if (extension_loaded('gd')) {
+                try {
+                    $ext = strtolower($file->getClientOriginalExtension());
+                    $src = null;
+                    if ($ext === 'png') {
+                        $src = @imagecreatefrompng($targetPath);
+                    } elseif (in_array($ext, ['jpg', 'jpeg'])) {
+                        $src = @imagecreatefromjpeg($targetPath);
+                    } elseif ($ext === 'webp') {
+                        $src = @imagecreatefromwebp($targetPath);
+                    }
+                    if ($src) {
+                        imagealphablending($src, true);
+                        imagesavealpha($src, true);
+                        foreach ([192, 512] as $size) {
+                            $dst = imagecreatetruecolor($size, $size);
+                            imagealphablending($dst, false);
+                            imagesavealpha($dst, true);
+                            $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                            imagefilledrectangle($dst, 0, 0, $size, $size, $transparent);
+                            imagecopyresampled($dst, $src, 0, 0, 0, 0, $size, $size, imagesx($src), imagesy($src));
+                            imagepng($dst, public_path('icon-' . $size . '.png'));
+                            imagedestroy($dst);
+                        }
+                        imagedestroy($src);
+                    }
+                } catch (\Throwable $e) {}
+            }
+        } elseif ($request->boolean('reset_logo')) {
+            $updateData['logo_path'] = 'logo.jpg';
+        }
+
+        $setting->update($updateData);
+
+        return back()->with('success', 'Pengaturan Logo Halaman Login dan Identitas Yayasan berhasil disimpan!');
+    }
 }

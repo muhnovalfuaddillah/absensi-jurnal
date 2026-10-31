@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Kelas {{ $class->name }} - {{ $setting->school_name ?? 'HadirGuru' }}</title>
+    <title>QR Code Kelas {{ $class->name }} - {{ $setting->school_name ?? 'SIMPRES BU' }}</title>
     <link rel="icon" type="image/jpeg" href="{{ asset('logo.jpg') }}">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -48,7 +48,7 @@
                 <h1 class="font-['Plus_Jakarta_Sans'] font-extrabold text-lg text-slate-900 leading-tight">
                     {{ $setting->school_name ?? 'SMA / SMK Negeri 1 Teladan' }}
                 </h1>
-                <p class="text-xs text-slate-600 mt-0.5">Sistem Presensi & Jurnal Pembelajaran Modern (HadirGuru)</p>
+                <p class="text-xs text-slate-600 mt-0.5">SIMPRES BU (Sistem Informasi Manajemen Presensi Bahrul Ulum)</p>
             </div>
         </div>
 
@@ -81,7 +81,7 @@
             <div>
                 <p class="font-bold text-amber-900 mb-0.5">Petunjuk Bapak/Ibu Guru:</p>
                 <p class="leading-relaxed">
-                    Sebelum memulai kegiatan tatap muka di kelas ini, buka aplikasi <b>HadirGuru</b> di ponsel Anda, lalu pindai (scan) QR Code di atas. Form jurnal dan presensi siswa akan otomatis terbuka setelah QR terverifikasi.
+                    Sebelum memulai kegiatan tatap muka di kelas ini, buka aplikasi <b>SIMPRES BU</b> di ponsel Anda, lalu pindai (scan) QR Code di atas. Form jurnal dan presensi siswa akan otomatis terbuka setelah QR terverifikasi.
                 </p>
             </div>
         </div>

@@ -125,6 +125,34 @@ class AttendanceSetting extends Model
     }
 
     /**
+     * Dapatkan instance AttendanceSetting khusus tingkat Yayasan / Portal Login Global (school_id is null)
+     */
+    public static function getGlobalSetting()
+    {
+        $setting = static::whereNull('school_id')->first();
+        if (!$setting) {
+            $setting = static::create([
+                'school_id' => null,
+                'school_name' => 'SIMPRES BU',
+                'foundation_name' => 'Yayasan Bahrul Ulum',
+                'npsn' => null,
+                'school_address' => 'Besuk Probolinggo',
+                'school_phone' => '089629615301',
+                'school_email' => 'yayasan@bahrululum.sch.id',
+                'website' => 'https://bahrululum.sch.id',
+                'logo_path' => file_exists(public_path('logo.jpg')) ? 'logo.jpg' : null,
+                'time_in' => '07:00:00',
+                'time_in_late_threshold' => '07:15:00',
+                'time_out' => '14:30:00',
+                'work_days' => 'Senin - Sabtu',
+                'radius_meters' => 150,
+                'is_geofence_active' => false,
+            ]);
+        }
+        return $setting;
+    }
+
+    /**
      * Accessor dinamis jam masuk: ikuti jadwal hari ini jika aktif
      */
     public function getTimeInAttribute($value)

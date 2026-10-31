@@ -44,6 +44,9 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
     // Dashboard Pribadi Guru
     Route::get('/dashboard', [GuruPortalController::class, 'dashboard'])->name('dashboard');
 
+    // Switcher Sekolah (Bagi guru yang mengajar di >1 sekolah, misal MTs & MA)
+    Route::post('/switch-school', [GuruPortalController::class, 'switchSchool'])->name('switch_school');
+
     // Presensi Mandiri dari HP / Perangkat Guru
     Route::post('/absen/masuk', [GuruPortalController::class, 'checkIn'])->name('checkin');
     Route::post('/absen/pulang', [GuruPortalController::class, 'checkOut'])->name('checkout');
@@ -111,6 +114,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Manajemen Data Guru & Akun Login
     Route::get('/guru', [TeacherController::class, 'index'])->name('teachers.index');
     Route::post('/guru', [TeacherController::class, 'store'])->name('teachers.store');
+    Route::post('/guru/link-existing', [TeacherController::class, 'linkExisting'])->name('teachers.link_existing');
     Route::put('/guru/{teacher}', [TeacherController::class, 'update'])->name('teachers.update');
     Route::patch('/guru/{teacher}/toggle', [TeacherController::class, 'toggleStatus'])->name('teachers.toggle');
     Route::patch('/guru/{teacher}/reset-face', [TeacherController::class, 'resetFace'])->name('teachers.reset_face');
@@ -192,5 +196,9 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('superadmin')->name('supe
     Route::post('/admin-sekolah', [SuperadminController::class, 'adminsStore'])->name('admins.store');
     Route::put('/admin-sekolah/{id}', [SuperadminController::class, 'adminsUpdate'])->name('admins.update');
     Route::delete('/admin-sekolah/{id}', [SuperadminController::class, 'adminsDestroy'])->name('admins.destroy');
+
+    // Pengaturan Identitas Yayasan & Logo Halaman Login
+    Route::get('/pengaturan', [SuperadminController::class, 'settingsIndex'])->name('settings.index');
+    Route::post('/pengaturan', [SuperadminController::class, 'settingsUpdate'])->name('settings.update');
 });
 

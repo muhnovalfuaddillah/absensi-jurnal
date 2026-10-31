@@ -15,5 +15,5 @@
 @section('heading', 'Sistem Sedang Dalam Pemeliharaan')
 
 @section('message')
-Aplikasi HadirGuru sedang melakukan pembaruan berkala dan optimalisasi server untuk meningkatkan kenyamanan presensi Anda. Sistem akan segera aktif kembali beberapa saat lagi.
+Aplikasi SIMPRES BU (Sistem Informasi Manajemen Presensi Bahrul Ulum) sedang melakukan pembaruan berkala dan optimalisasi server untuk meningkatkan kenyamanan presensi Anda. Sistem akan segera aktif kembali beberapa saat lagi.
 @endsection

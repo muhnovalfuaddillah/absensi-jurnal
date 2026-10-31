@@ -16,9 +16,16 @@ class TeacherController extends Controller
         $search = $request->input('search');
         $status = $request->input('status');
         $employmentStatus = $request->input('employment_status');
+        $foundationStatus = $request->input('foundation_status');
         $schoolId = current_school_id();
 
-        $query = Teacher::where('school_id', $schoolId)->with('user')->orderBy('name');
+        $currentSchool = current_school();
+        $defaultFoundationName = $currentSchool->foundation_name ?? \App\Models\AttendanceSetting::getGlobalSetting()->foundation_name ?? 'Yayasan Bahrul Ulum';
+
+        $query = Teacher::where(function ($q) use ($schoolId) {
+            $q->where('school_id', $schoolId)
+              ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+        })->with(['user', 'schools'])->orderBy('name');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -26,7 +33,8 @@ class TeacherController extends Controller
                   ->orWhere('nip', 'like', "%{$search}%")
                   ->orWhere('nuptk', 'like', "%{$search}%")
                   ->orWhere('subject', 'like', "%{$search}%")
-                  ->orWhere('class_duty', 'like', "%{$search}%");
+                  ->orWhere('class_duty', 'like', "%{$search}%")
+                  ->orWhere('foundation_name', 'like', "%{$search}%");
             });
         }
 
@@ -38,25 +46,58 @@ class TeacherController extends Controller
             $query->where('employment_status', $employmentStatus);
         }
 
+        if ($foundationStatus !== null && $foundationStatus !== '') {
+            $query->where('teaches_in_foundation', (bool) $foundationStatus);
+        }
+
         $teachers = $query->paginate(15)->withQueryString();
         
-        $totalTeachers = Teacher::where('school_id', $schoolId)->count();
-        $activeTeachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->count();
-        $tetapCount = Teacher::where('school_id', $schoolId)->where('employment_status', 'like', '%Tetap%')->count();
-        $honorerCount = Teacher::where('school_id', $schoolId)->where(function($q) {
+        $totalTeachers = Teacher::where(function ($q) use ($schoolId) {
+            $q->where('school_id', $schoolId)
+              ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+        })->count();
+
+        $activeTeachers = Teacher::where(function ($q) use ($schoolId) {
+            $q->where('school_id', $schoolId)
+              ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+        })->where('is_active', true)->count();
+
+        $tetapCount = Teacher::where(function ($q) use ($schoolId) {
+            $q->where('school_id', $schoolId)
+              ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+        })->where('employment_status', 'like', '%Tetap%')->count();
+
+        $honorerCount = Teacher::where(function ($q) use ($schoolId) {
+            $q->where('school_id', $schoolId)
+              ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+        })->where(function($q) {
             $q->where('employment_status', 'like', '%Honorer%')
               ->orWhere('employment_status', 'like', '%GTT%');
         })->count();
+
+        $allSchools = \App\Models\School::where('is_active', true)->orderBy('name')->get();
+
+        // Guru dari sekolah lain yang belum terhubung ke sekolah ini (untuk fitur cepat tautkan guru)
+        $unlinkedTeachers = Teacher::where('school_id', '!=', $schoolId)
+            ->whereDoesntHave('schools', fn($s) => $s->where('schools.id', $schoolId))
+            ->where('is_active', true)
+            ->with('school')
+            ->orderBy('name')
+            ->get();
 
         return view('teachers.index', compact(
             'teachers',
             'search',
             'status',
             'employmentStatus',
+            'foundationStatus',
+            'defaultFoundationName',
             'totalTeachers',
             'activeTeachers',
             'tetapCount',
-            'honorerCount'
+            'honorerCount',
+            'allSchools',
+            'unlinkedTeachers'
         ));
     }
 
@@ -68,6 +109,8 @@ class TeacherController extends Controller
             'name' => 'required|string|max:255',
             'subject' => 'nullable|string|max:255',
             'employment_status' => 'required|string|max:50',
+            'teaches_in_foundation' => 'nullable|boolean',
+            'foundation_name' => 'nullable|string|max:150',
             'education' => 'nullable|string|max:50',
             'class_duty' => 'nullable|string|max:100',
             'gender' => 'required|in:L,P',
@@ -88,6 +131,10 @@ class TeacherController extends Controller
         }
 
         $schoolId = current_school_id();
+        $currentSchool = current_school();
+        $defaultFoundationName = $currentSchool->foundation_name ?? \App\Models\AttendanceSetting::getGlobalSetting()->foundation_name ?? 'Yayasan Bahrul Ulum';
+        $teachesInFoundation = $request->boolean('teaches_in_foundation', true);
+        $foundationName = $teachesInFoundation ? ($request->input('foundation_name') ?: $defaultFoundationName) : null;
 
         $teacher = Teacher::create([
             'school_id' => $schoolId,
@@ -96,6 +143,8 @@ class TeacherController extends Controller
             'name' => $request->name,
             'subject' => $request->subject,
             'employment_status' => $request->employment_status,
+            'teaches_in_foundation' => $teachesInFoundation,
+            'foundation_name' => $foundationName,
             'education' => $request->education,
             'class_duty' => $request->class_duty,
             'gender' => $request->gender,
@@ -107,6 +156,13 @@ class TeacherController extends Controller
             'photo' => $photoPath,
             'is_active' => true,
         ]);
+
+        // Hubungkan ke sekolah-sekolah penugasan (Multi-Sekolah)
+        $schoolIds = $request->input('school_ids', []);
+        if (!in_array($schoolId, $schoolIds)) {
+            $schoolIds[] = $schoolId;
+        }
+        $teacher->schools()->sync($schoolIds);
 
         // Buat Akun Login Guru
         $cleanNameSlug = Str::slug(preg_replace('/^(Drs\.|Dra\.|H\.|Hj\.|Ust\.)\s*/i', '', $teacher->name), '.');
@@ -129,12 +185,18 @@ class TeacherController extends Controller
 
     public function update(Request $request, Teacher $teacher)
     {
+        $schoolId = current_school_id();
+        $currentSchool = current_school();
+        $defaultFoundationName = $currentSchool->foundation_name ?? \App\Models\AttendanceSetting::getGlobalSetting()->foundation_name ?? 'Yayasan Bahrul Ulum';
+
         $request->validate([
             'nip' => 'nullable|string|max:50|unique:teachers,nip,' . $teacher->id,
             'nuptk' => 'nullable|string|max:50',
             'name' => 'required|string|max:255',
             'subject' => 'nullable|string|max:255',
             'employment_status' => 'required|string|max:50',
+            'teaches_in_foundation' => 'nullable|boolean',
+            'foundation_name' => 'nullable|string|max:150',
             'education' => 'nullable|string|max:50',
             'class_duty' => 'nullable|string|max:100',
             'gender' => 'required|in:L,P',
@@ -145,6 +207,7 @@ class TeacherController extends Controller
             'email' => 'nullable|email|max:255',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:3072',
             'is_active' => 'required|boolean',
+            'school_ids' => 'nullable|array',
             // Akun Login Update
             'username' => 'nullable|string|max:100|unique:users,username,' . ($teacher->user->id ?? 0),
             'password' => 'nullable|string|min:6',
@@ -159,12 +222,17 @@ class TeacherController extends Controller
             $photoPath = $request->file('photo')->store('teachers', 'public');
         }
 
+        $teachesInFoundation = $request->boolean('teaches_in_foundation', false);
+        $foundationName = $teachesInFoundation ? ($request->input('foundation_name') ?: $defaultFoundationName) : null;
+
         $teacher->update([
             'nip' => $request->nip,
             'nuptk' => $request->nuptk,
             'name' => $request->name,
             'subject' => $request->subject,
             'employment_status' => $request->employment_status,
+            'teaches_in_foundation' => $teachesInFoundation,
+            'foundation_name' => $foundationName,
             'education' => $request->education,
             'class_duty' => $request->class_duty,
             'gender' => $request->gender,
@@ -176,6 +244,15 @@ class TeacherController extends Controller
             'photo' => $photoPath,
             'is_active' => $request->is_active,
         ]);
+
+        // Sinkronisasi Multi-Sekolah
+        if ($request->has('school_ids')) {
+            $schoolIds = $request->input('school_ids', []);
+            if (!in_array($schoolId, $schoolIds) && !is_superadmin()) {
+                $schoolIds[] = $schoolId;
+            }
+            $teacher->schools()->sync($schoolIds);
+        }
 
         // Sinkronisasi data ke tabel users jika ada
         if ($teacher->user) {
@@ -201,6 +278,7 @@ class TeacherController extends Controller
             $password = $request->filled('password') ? $request->password : 'guru123';
 
             User::create([
+                'school_id' => $schoolId,
                 'name' => $teacher->name,
                 'email' => $email,
                 'username' => $username,
@@ -213,14 +291,49 @@ class TeacherController extends Controller
         return back()->with('success', "Data profil guru '{$teacher->name}' berhasil diperbarui!");
     }
 
+    /**
+     * Tautkan Guru yang Sudah Terdaftar di Sekolah Lain ke Sekolah Ini
+     */
+    public function linkExisting(Request $request)
+    {
+        $request->validate([
+            'teacher_id' => 'required|exists:teachers,id',
+        ]);
+
+        $schoolId = current_school_id();
+        $teacher = Teacher::findOrFail($request->teacher_id);
+
+        $teacher->schools()->syncWithoutDetaching([$schoolId => [
+            'is_primary' => false,
+            'subject' => $teacher->subject,
+            'class_duty' => $teacher->class_duty,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]]);
+
+        $school = \App\Models\School::find($schoolId);
+
+        return back()->with('success', "Guru '{$teacher->name}' berhasil ditautkan ke {$school->name}! Guru ini kini dapat mengajar dan presensi di kedua sekolah.");
+    }
+
     public function destroy(Teacher $teacher)
     {
+        $schoolId = current_school_id();
         $name = $teacher->name;
+
+        // Jika guru terdaftar di lebih dari 1 sekolah dan yang menghapus adalah admin sekolah (bukan superadmin)
+        if ($teacher->schools()->count() > 1 && !is_superadmin()) {
+            $teacher->schools()->detach($schoolId);
+            return back()->with('success', "Penugasan guru '{$name}' di sekolah ini telah dilepas. (Profil dan penugasan di sekolah lainnya tetap aktif).");
+        }
 
         // Hapus foto jika ada
         if ($teacher->photo && Storage::disk('public')->exists($teacher->photo)) {
             Storage::disk('public')->delete($teacher->photo);
         }
+
+        // Hapus relasi pivot sekolah
+        $teacher->schools()->detach();
 
         // Hapus akun user
         if ($teacher->user) {

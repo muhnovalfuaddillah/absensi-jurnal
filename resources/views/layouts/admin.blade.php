@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta content="web_dashboard" name="shell-type"/>
-    <title>@yield('title', 'Monitoring Presensi Guru Real-Time') - HadirGuru</title>
+    <title>@yield('title', 'Monitoring Presensi Guru Real-Time') - SIMPRES BU</title>
 
     <link rel="icon" type="image/jpeg" href="{{ $schoolSetting->logo_url ?? asset('logo.jpg') }}"/>
     <link rel="manifest" href="{{ asset('manifest.json') }}">
@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="HadirGuru">
+    <meta name="apple-mobile-web-app-title" content="SIMPRES BU">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -175,9 +175,9 @@
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-space-sm">
                 <img src="{{ $schoolSetting->logo_url ?? asset('logo.jpg') }}" alt="Logo" class="w-10 h-10 rounded-xl object-contain bg-surface-container-lowest p-1 shadow-sm border border-emerald-200/80 shrink-0">
                 <div class="flex flex-col">
-                    <span class="font-headline-sm text-headline-sm text-primary font-black tracking-tight leading-tight">HadirGuru</span>
-                    <span class="font-label-sm text-label-sm text-on-surface-variant font-semibold leading-tight truncate max-w-[160px]">
-                        {{ $schoolSetting->foundation_name ?: $schoolSetting->school_name }}
+                    <span class="font-headline-sm text-headline-sm text-primary font-black tracking-tight leading-tight">SIMPRES BU</span>
+                    <span class="font-label-sm text-[11px] text-on-surface-variant font-medium leading-tight truncate max-w-[170px]" title="Sistem Informasi Manajemen Presensi Bahrul Ulum">
+                        Presensi Bahrul Ulum
                     </span>
                 </div>
             </a>
@@ -226,6 +226,13 @@
                         <div class="flex items-center gap-2">
                             <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
                             <span class="text-xs">Kelola Admin Sekolah</span>
+                        </div>
+                    </a>
+                    <a href="{{ route('superadmin.settings.index') }}" 
+                       class="group flex items-center justify-between px-2.5 py-1.5 rounded-xl transition-all {{ request()->routeIs('superadmin.settings.*') ? 'bg-amber-500 text-white font-bold shadow-xs' : 'text-slate-700 hover:bg-amber-100/60 font-semibold' }}">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">palette</span>
+                            <span class="text-xs">Logo Login & Yayasan</span>
                         </div>
                     </a>
                 </nav>

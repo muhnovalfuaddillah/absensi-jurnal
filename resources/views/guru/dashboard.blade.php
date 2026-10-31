@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'HadirGuru - Presensi Face ID')
+@section('title', 'SIMPRES BU - Presensi Face ID')
 
 @push('styles')
 <style>
@@ -69,35 +69,128 @@
     @endif
 </div>
 
-<!-- 2. Live Digital Clock & Geofence Card -->
-<div class="bg-[#f0f7ff] border border-blue-100/70 rounded-3xl p-4 shadow-xs">
+@if($teacher->isMultiSchool())
+<!-- Multi-School Active Indicator Banner -->
+<div class="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white rounded-3xl p-3.5 shadow-sm border border-emerald-600/30 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/20">
+            <i class="fa-solid fa-repeat text-white text-base"></i>
+        </div>
+        <div class="min-w-0">
+            <span class="text-[10px] uppercase font-extrabold tracking-wider text-emerald-200">
+                Mode Multi-Sekolah Aktif
+            </span>
+            <h3 class="text-xs sm:text-sm font-extrabold truncate">
+                {{ $setting->school_name ?? 'Madrasah' }}
+            </h3>
+            <p class="text-[10px] text-emerald-100/80 truncate">
+                Presensi & jadwal tersinkronisasi khusus madrasah ini
+            </p>
+        </div>
+    </div>
+    <button type="button" onclick="openGuruSchoolModal()"
+            class="px-3 py-1.5 rounded-xl bg-white text-emerald-900 font-extrabold text-[11px] hover:bg-emerald-50 shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95 transition-all">
+        <span>Ganti</span>
+        <i class="fa-solid fa-chevron-right text-[9px]"></i>
+    </button>
+</div>
+@endif
+
+<!-- 2. Live Digital Clock & Geofence Radar Card -->
+<div class="bg-gradient-to-b from-[#f0f7ff] to-white border border-blue-100/80 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col gap-3.5">
+    <!-- Top: Clock & Today Date -->
     <div class="flex items-center justify-between">
         <div>
             <div class="flex items-baseline gap-2">
-                <span class="text-3xl sm:text-4xl font-extrabold font-mono text-[#064e3b] tracking-tight" id="digital-clock">
+                <span class="text-3xl sm:text-4xl font-black font-mono text-[#064e3b] tracking-tight" id="digital-clock">
                     {{ now()->format('H:i:s') }}
                 </span>
-                <span class="text-xs font-bold text-slate-400">WIB</span>
+                <span class="text-xs font-extrabold text-blue-600/80 bg-blue-50 px-2 py-0.5 rounded-md">WIB</span>
             </div>
-            <p class="text-[11px] text-slate-500 font-medium mt-0.5">
-                {{ \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y') }} • 1446 H
+            <p class="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar text-[10px] text-emerald-600"></i>
+                <span>{{ \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y') }} • 1446 H</span>
             </p>
         </div>
-        <div class="w-11 h-11 rounded-full bg-emerald-100 text-[#13793e] flex items-center justify-center text-xl shrink-0 shadow-xs">
+        <div class="w-11 h-11 rounded-2xl bg-emerald-100 text-[#13793e] flex items-center justify-center text-xl shrink-0 shadow-xs border border-emerald-200/60">
             <i class="fa-regular fa-clock"></i>
         </div>
     </div>
-    <div class="mt-3 pt-3 border-t border-blue-200/40 flex items-center justify-between flex-wrap gap-2">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 border border-slate-200/70 text-slate-700 shadow-2xs">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="geofenceText">Area Madrasah Terverifikasi (Radius {{ $setting->radius_meters ?? 50 }}m - Valid)</span>
-            <i class="fa-solid fa-check text-emerald-600 text-[11px]"></i>
-        </span>
+
+    <!-- Live Real-Time Geofence Radar Banner -->
+    <div id="geofenceBanner" class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-950 transition-all duration-300 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div id="geofenceIconWrapper" class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                    <i id="geofenceIcon" class="fa-solid fa-satellite-dish text-xs animate-pulse"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">RADAR GEOFENCE GPS</span>
+                        <span id="geofenceLiveDot" class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                    </div>
+                    <h4 id="geofenceTitle" class="text-xs sm:text-sm font-black text-slate-900 leading-tight truncate">
+                        Mendeteksi Koordinat GPS...
+                    </h4>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+                <span id="geofenceBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                    <span>Mencari Sinyal GPS</span>
+                </span>
+                <button type="button" onclick="refreshGeofenceLocation(true)" title="Segarkan Koordinat GPS"
+                        class="w-7 h-7 rounded-xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 shadow-2xs flex items-center justify-center text-xs active:scale-90 transition-all">
+                    <i id="geofenceRefreshIcon" class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Real-time Explanation text -->
+        <div id="geofenceTextBox" class="text-[11.5px] leading-relaxed text-slate-700 font-medium">
+            <span id="geofenceText">Sedang menyelaraskan posisi GPS perangkat Anda dengan titik koordinat <strong>{{ $setting->school_name ?? 'Sekolah' }}</strong>...</span>
+        </div>
+
+        <!-- Live Telemetry / Metrics Bar -->
+        <div id="geofenceMetricsBar" class="flex items-center flex-wrap gap-1.5 pt-2 border-t border-slate-200/50 text-[10px] font-mono font-bold">
+            <span id="metricDistance" class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                <i class="fa-solid fa-route text-[9px] text-blue-500 mr-1"></i>Jarak: Mengukur...
+            </span>
+            <span id="metricRadius" class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                <i class="fa-solid fa-bullseye text-[9px] text-emerald-500 mr-1"></i>Radius Maks: {{ $setting->radius_meters ?? 150 }}m
+            </span>
+            <span id="metricAccuracy" class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-500 hidden">
+                <i class="fa-solid fa-crosshairs text-[9px] mr-1"></i>Akurasi: ±0m
+            </span>
+        </div>
     </div>
 </div>
 
 <!-- 3. Gerbang Presensi Harian (Dual Big Cards - Masuk & Pulang) -->
 <div>
+    <!-- Real-time Outside Radius Alert Banner (Muncul otomatis secara real-time saat guru berada di luar jangkauan) -->
+    <div id="outsideRadiusAlertBanner" class="hidden mb-3 p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950 shadow-sm">
+        <div class="flex items-start gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-2">
+                    <h4 class="text-xs font-black text-rose-900 leading-tight">
+                        ⛔ PERHATIAN: ANDA DI LUAR AREA RADIUS SEKOLAH
+                    </h4>
+                    <span id="outsideRadiusPill" class="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-200 text-rose-900 uppercase shrink-0">
+                        Presensi Terkunci
+                    </span>
+                </div>
+                <p id="outsideRadiusDesc" class="text-[11px] text-rose-800 font-medium mt-1 leading-snug">
+                    Posisi Anda terdeteksi berjarak <strong id="outsideDistanceVal">0 meter</strong> dari <strong>{{ $setting->school_name ?? 'Madrasah' }}</strong> (Batas radius maksimal: <strong>{{ $setting->radius_meters ?? 150 }}m</strong>). Tombol presensi ditahan hingga Anda berada di dalam area lingkungan madrasah.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <div class="flex items-center justify-between mb-2.5 px-1">
         <h3 class="font-extrabold text-sm text-slate-900">Gerbang Presensi Harian</h3>
         <span class="text-xs font-bold text-[#13793e]">Shift Pagi</span>
@@ -106,13 +199,13 @@
     <div class="grid grid-cols-2 gap-3">
         <!-- Card 1: Presensi Masuk -->
         @if(!$todayAttendance)
-            <button type="button" onclick="handleAttendanceAction('masuk')"
+            <button type="button" id="btnCardMasuk" onclick="handleAttendanceAction('masuk')"
                     class="bg-[#13793e] hover:bg-[#0f6332] text-white rounded-3xl p-4 shadow-md shadow-emerald-800/20 active:scale-[0.98] transition-all text-left flex flex-col justify-between min-h-[145px] relative group overflow-hidden">
                 <div class="flex items-center justify-between w-full">
-                    <div class="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center text-white text-base">
+                    <div id="btnCardMasukIconWrapper" class="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center text-white text-base">
                         <i class="fa-solid fa-camera"></i>
                     </div>
-                    <span class="px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs">
+                    <span id="badgeCardMasukStatus" class="px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs">
                         BUKA
                     </span>
                 </div>
@@ -121,7 +214,7 @@
                     <p class="text-[11px] text-emerald-100 font-medium mt-0.5">
                         {{ substr($setting->time_in, 0, 5) }} - {{ substr($setting->time_in_late_threshold, 0, 5) }} WIB
                     </p>
-                    <span class="text-[11px] text-emerald-200 font-semibold mt-2 flex items-center gap-1.5">
+                    <span id="subCardMasukText" class="text-[11px] text-emerald-200 font-semibold mt-2 flex items-center gap-1.5">
                         <i class="fa-solid fa-camera-rotate text-[10px]"></i> Tap Kamera Selfie
                     </span>
                 </div>
@@ -193,13 +286,13 @@
             </div>
         @else
             <!-- Sudah masuk, siap absen pulang -->
-            <button type="button" onclick="handleAttendanceAction('pulang')"
+            <button type="button" id="btnCardPulang" onclick="handleAttendanceAction('pulang')"
                     class="bg-[#13793e] hover:bg-[#0f6332] text-white rounded-3xl p-4 shadow-md shadow-emerald-800/20 active:scale-[0.98] transition-all text-left flex flex-col justify-between min-h-[145px] relative group overflow-hidden">
                 <div class="flex items-center justify-between w-full">
-                    <div class="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center text-white text-base">
+                    <div id="btnCardPulangIconWrapper" class="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center text-white text-base">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </div>
-                    <span class="px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs">
+                    <span id="badgeCardPulangStatus" class="px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs">
                         BUKA
                     </span>
                 </div>
@@ -208,7 +301,7 @@
                     <p class="text-[11px] text-emerald-100 font-medium mt-0.5">
                         {{ substr($setting->time_out, 0, 5) }} WIB
                     </p>
-                    <span class="text-[11px] text-emerald-200 font-semibold mt-2 flex items-center gap-1.5">
+                    <span id="subCardPulangText" class="text-[11px] text-emerald-200 font-semibold mt-2 flex items-center gap-1.5">
                         <i class="fa-solid fa-camera-rotate text-[10px]"></i> Tap Kamera Selfie
                     </span>
                 </div>
@@ -1025,22 +1118,12 @@
         return Math.round(R * c);
     }
 
-    // Live Tracker Geofence GPS
+    // Live Tracker Geofence GPS Real-Time
     function initGeofenceTracker() {
-        const banner = document.getElementById('geofenceBanner');
-        const icon = document.getElementById('geofenceIcon');
-        const text = document.getElementById('geofenceText');
-        const badge = document.getElementById('geofenceBadge');
-
         if (!schoolConfig.isGeofenceActive || !schoolConfig.lat || !schoolConfig.lng) {
-            banner.className = "flex items-center justify-between bg-emerald-50 border border-emerald-200 px-space-md py-2.5 rounded-xl text-emerald-900";
-            icon.className = "material-symbols-outlined text-[20px] text-emerald-600 flex-shrink-0";
-            icon.textContent = "check_circle";
-            text.innerHTML = `<strong class="text-emerald-950 font-bold">Lokasi Bebas:</strong> Pembatasan radius dinonaktifkan oleh Admin.`;
-            badge.textContent = "Bebas Radius";
-            badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800";
             teacherGps.isInside = true;
             teacherGps.ready = true;
+            applyGeofenceUiState(true, 0, 0, null, null, true);
             return;
         }
 
@@ -1050,15 +1133,286 @@
             return;
         }
 
-        navigator.geolocation.watchPosition(
+        // Hentikan watch sebelumnya jika sudah ada
+        if (teacherGps.watchId !== null) {
+            navigator.geolocation.clearWatch(teacherGps.watchId);
+        }
+
+        // Watch Position Real-Time (Mengikuti pergerakan guru secara langsung)
+        teacherGps.watchId = navigator.geolocation.watchPosition(
             function(pos) {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
+                const accuracy = Math.round(pos.coords.accuracy || 0);
+
                 teacherGps.lat = lat;
                 teacherGps.lng = lng;
+                teacherGps.accuracy = accuracy;
                 teacherGps.ready = true;
+                teacherGps.error = null;
 
-                // Sync ke input form modal
+                // Sinkronisasi ke input form modal absen
+                const inLat = document.getElementById('inputLatitude');
+                const inLng = document.getElementById('inputLongitude');
+                if (inLat) inLat.value = lat;
+                if (inLng) inLng.value = lng;
+
+                // Hitung jarak Haversine ke titik pusat sekolah
+                const dist = calculateDistance(lat, lng, schoolConfig.lat, schoolConfig.lng);
+                teacherGps.distance = dist;
+                const isInside = dist <= schoolConfig.radius;
+                teacherGps.isInside = isInside;
+
+                // Perbarui tampilan halaman secara real-time
+                applyGeofenceUiState(isInside, dist, accuracy, lat, lng, false);
+            },
+            function(err) {
+                let msg = "Izin lokasi GPS belum diaktifkan di browser/ponsel Anda.";
+                if (err.code === 1) msg = "Izin lokasi GPS ditolak oleh peramban web Anda.";
+                else if (err.code === 2) msg = "Sinyal GPS tidak tersedia atau lemah.";
+                else if (err.code === 3) msg = "Waktu tunggu GPS habis (timeout).";
+
+                teacherGps.error = msg;
+                teacherGps.ready = false;
+                updateGeofenceUiError(msg);
+            },
+            { enableHighAccuracy: true, maximumAge: 3000, timeout: 12000 }
+        );
+    }
+
+    // Terapkan Status Geofence ke Tampilan Halaman Guru Secara Real-Time
+    function applyGeofenceUiState(isInside, dist, accuracy, lat, lng, isFreeRadius = false) {
+        const banner = document.getElementById('geofenceBanner');
+        const iconWrapper = document.getElementById('geofenceIconWrapper');
+        const icon = document.getElementById('geofenceIcon');
+        const liveDot = document.getElementById('geofenceLiveDot');
+        const title = document.getElementById('geofenceTitle');
+        const badge = document.getElementById('geofenceBadge');
+        const text = document.getElementById('geofenceText');
+        const mDist = document.getElementById('metricDistance');
+        const mRad = document.getElementById('metricRadius');
+        const mAcc = document.getElementById('metricAccuracy');
+        const alertBanner = document.getElementById('outsideRadiusAlertBanner');
+        const outsideDistVal = document.getElementById('outsideDistanceVal');
+        const outsideDesc = document.getElementById('outsideRadiusDesc');
+        const badgeMasuk = document.getElementById('badgeCardMasukStatus');
+        const subMasuk = document.getElementById('subCardMasukText');
+        const badgePulang = document.getElementById('badgeCardPulangStatus');
+        const subPulang = document.getElementById('subCardPulangText');
+        const locText = document.getElementById('scanLocationText');
+
+        // Kasus 1: Bebas Radius (Geofence Nonaktif)
+        if (isFreeRadius) {
+            if (banner) banner.className = "p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-300 text-emerald-950 transition-all duration-300 flex flex-col gap-2.5 shadow-2xs";
+            if (iconWrapper) iconWrapper.className = "w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs";
+            if (icon) icon.className = "fa-solid fa-earth-asia text-xs";
+            if (liveDot) liveDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+            if (title) title.textContent = "Lokasi Bebas Radius";
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+                badge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 text-[10px]"></i><span>Bebas Radius</span>`;
+            }
+            if (text) text.innerHTML = `Pembatasan radius dinonaktifkan oleh Administrator. Presensi dapat dilakukan dari mana saja.`;
+            if (mDist) {
+                mDist.className = "px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold";
+                mDist.innerHTML = `<i class="fa-solid fa-check text-[9px] text-emerald-600 mr-1"></i>Bebas Area`;
+            }
+            if (alertBanner) alertBanner.classList.add('hidden');
+            if (locText) locText.innerHTML = `<span class="text-emerald-700 font-bold">📍 Lokasi: Bebas Radius</span>`;
+            return;
+        }
+
+        const distKm = (dist >= 1000) ? (dist / 1000).toFixed(2).replace('.', ',') + ' km' : dist + ' m';
+        const excess = Math.max(0, dist - schoolConfig.radius);
+        const excessKm = (excess >= 1000) ? (excess / 1000).toFixed(2).replace('.', ',') + ' km' : excess + ' m';
+
+        if (isInside) {
+            // ==========================================
+            // KASUS 2: DI DALAM JANGKAUAN (VALID)
+            // ==========================================
+            if (banner) banner.className = "p-3.5 rounded-2xl bg-emerald-50/95 border border-emerald-300 text-emerald-950 transition-all duration-300 flex flex-col gap-2.5 shadow-xs ring-1 ring-emerald-200/50";
+            if (iconWrapper) iconWrapper.className = "w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs";
+            if (icon) icon.className = "fa-solid fa-circle-check text-xs";
+            if (liveDot) liveDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            if (title) title.textContent = "Lokasi Memenuhi Syarat Presensi";
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span><span>Dalam Radius (${dist}m)</span>`;
+            }
+            if (text) {
+                text.innerHTML = `Posisi Anda terdeteksi <b>${dist} meter</b> dari titik pusat <b>${schoolConfig.name}</b>. Anda berada di dalam batas radius resmi (Maksimal <b>${schoolConfig.radius}m</b>). Presensi Face ID siap digunakan.`;
+            }
+            if (mDist) {
+                mDist.className = "px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold";
+                mDist.innerHTML = `<i class="fa-solid fa-route text-[9px] text-emerald-600 mr-1"></i>Jarak: ${dist} m (Valid)`;
+            }
+            if (mRad) {
+                mRad.innerHTML = `<i class="fa-solid fa-bullseye text-[9px] text-emerald-600 mr-1"></i>Radius Maks: ${schoolConfig.radius}m`;
+            }
+            if (mAcc && accuracy > 0) {
+                mAcc.classList.remove('hidden');
+                mAcc.innerHTML = `<i class="fa-solid fa-crosshairs text-[9px] mr-1"></i>Akurasi: ±${accuracy}m`;
+            }
+
+            // Sembunyikan alert peringatan di luar jangkauan
+            if (alertBanner) alertBanner.classList.add('hidden');
+
+            // Kembalikan badge kartu ke mode normal BUKA
+            if (badgeMasuk) {
+                badgeMasuk.textContent = "BUKA";
+                badgeMasuk.className = "px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs";
+            }
+            if (subMasuk) {
+                subMasuk.innerHTML = `<i class="fa-solid fa-camera-rotate text-[10px]"></i> Tap Kamera Selfie`;
+            }
+            if (badgePulang) {
+                badgePulang.textContent = "BUKA";
+                badgePulang.className = "px-2 py-0.5 rounded-full bg-white text-[#13793e] font-black text-[10px] tracking-wider shadow-xs";
+            }
+            if (subPulang) {
+                subPulang.innerHTML = `<i class="fa-solid fa-camera-rotate text-[10px]"></i> Tap Kamera Selfie`;
+            }
+
+            // Status GPS di Modal Kamera
+            if (locText) {
+                locText.innerHTML = `<span class="text-emerald-700 font-bold flex items-center gap-1"><i class="fa-solid fa-circle-check text-xs"></i> 📍 GPS Valid: Dalam Radius (${dist}m)</span>`;
+            }
+
+        } else {
+            // ==========================================
+            // KASUS 3: DI LUAR JANGKAUAN (TIDAK BOLEH ABSEN)
+            // ==========================================
+            if (banner) banner.className = "p-3.5 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950 transition-all duration-300 flex flex-col gap-2.5 shadow-sm ring-1 ring-rose-200";
+            if (iconWrapper) iconWrapper.className = "w-8 h-8 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs animate-pulse";
+            if (icon) icon.className = "fa-solid fa-triangle-exclamation text-xs";
+            if (liveDot) liveDot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
+            if (title) title.textContent = "⛔ DI LUAR JANGKAUAN RADIUS SEKOLAH";
+            if (badge) {
+                badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300";
+                badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-ping"></span><span>Di Luar Area (+${excessKm})</span>`;
+            }
+            if (text) {
+                text.innerHTML = `Perhatian! Anda terdeteksi berjarak <b>${distKm} (${dist} meter)</b> dari lingkungan <b>${schoolConfig.name}</b>. Batas radius maksimal adalah <b>${schoolConfig.radius} meter</b> (Anda berada <b>${excessKm} di luar batas area</b>). Presensi Masuk & Pulang terkunci secara otomatis.`;
+            }
+            if (mDist) {
+                mDist.className = "px-2 py-0.5 rounded-md bg-rose-100 border border-rose-300 text-rose-900 font-black";
+                mDist.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px] text-rose-600 mr-1"></i>Jarak: ${distKm} (Di Luar)`;
+            }
+            if (mRad) {
+                mRad.innerHTML = `<i class="fa-solid fa-bullseye text-[9px] text-rose-600 mr-1"></i>Radius Maks: ${schoolConfig.radius}m`;
+            }
+            if (mAcc && accuracy > 0) {
+                mAcc.classList.remove('hidden');
+                mAcc.innerHTML = `<i class="fa-solid fa-crosshairs text-[9px] mr-1"></i>Akurasi: ±${accuracy}m`;
+            }
+
+            // Tampilkan Banner Peringatan Menonjol di Atas Gerbang Presensi
+            if (alertBanner) {
+                alertBanner.classList.remove('hidden');
+            }
+            if (outsideDistVal) {
+                outsideDistVal.textContent = `${distKm} (${dist} meter)`;
+            }
+            if (outsideDesc) {
+                outsideDesc.innerHTML = `Posisi Anda terdeteksi berjarak <strong>${distKm} (${dist} meter)</strong> dari <strong>${schoolConfig.name}</strong> (Batas radius maksimal: <strong>${schoolConfig.radius}m</strong>, selisih <strong>+${excessKm} di luar area</strong>). Tombol presensi ditahan hingga Anda berada di dalam lingkungan sekolah.`;
+            }
+
+            // Perbarui Badge Tombol Presensi Menjadi Peringatan "DI LUAR AREA"
+            if (badgeMasuk) {
+                badgeMasuk.textContent = "DI LUAR AREA";
+                badgeMasuk.className = "px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 font-black text-[9px] tracking-wider shadow-xs";
+            }
+            if (subMasuk) {
+                subMasuk.innerHTML = `<i class="fa-solid fa-location-crosshairs text-[10px] text-rose-300"></i> Terkunci (${distKm})`;
+            }
+            if (badgePulang) {
+                badgePulang.textContent = "DI LUAR AREA";
+                badgePulang.className = "px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 font-black text-[9px] tracking-wider shadow-xs";
+            }
+            if (subPulang) {
+                subPulang.innerHTML = `<i class="fa-solid fa-location-crosshairs text-[10px] text-rose-300"></i> Terkunci (${distKm})`;
+            }
+
+            // Status GPS di Modal Kamera
+            if (locText) {
+                locText.innerHTML = `<span class="text-rose-600 font-bold flex items-center gap-1 animate-pulse"><i class="fa-solid fa-triangle-exclamation text-xs"></i> ⛔ Di Luar Radius: ${distKm} (Maks: ${schoolConfig.radius}m)</span>`;
+            }
+        }
+    }
+
+    // Tampilan Saat Terjadi Kesalahan GPS / Izin Ditolak
+    function updateGeofenceUiError(msg) {
+        const banner = document.getElementById('geofenceBanner');
+        const iconWrapper = document.getElementById('geofenceIconWrapper');
+        const icon = document.getElementById('geofenceIcon');
+        const liveDot = document.getElementById('geofenceLiveDot');
+        const title = document.getElementById('geofenceTitle');
+        const badge = document.getElementById('geofenceBadge');
+        const text = document.getElementById('geofenceText');
+        const mDist = document.getElementById('metricDistance');
+        const alertBanner = document.getElementById('outsideRadiusAlertBanner');
+        const locText = document.getElementById('scanLocationText');
+
+        if (banner) banner.className = "p-3.5 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 transition-all duration-300 flex flex-col gap-2.5 shadow-2xs";
+        if (iconWrapper) iconWrapper.className = "w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs";
+        if (icon) icon.className = "fa-solid fa-location-slash text-xs";
+        if (liveDot) liveDot.className = "w-2 h-2 rounded-full bg-amber-500 animate-ping";
+        if (title) title.textContent = "Izin Lokasi GPS Belum Aktif";
+        if (badge) {
+            badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300";
+            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-600 text-[10px]"></i><span>GPS Mati</span>`;
+        }
+        if (text) {
+            text.innerHTML = `Sistem memerlukan akses koordinat GPS Anda: <b>${msg}</b>. Pastikan GPS/Lokasi HP aktif dan izinkan peramban mengakses lokasi, lalu tekan tombol perbarui di sebelah kanan.`;
+        }
+        if (mDist) {
+            mDist.className = "px-2 py-0.5 rounded-md bg-amber-100 border border-amber-300 text-amber-900 font-bold";
+            mDist.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[9px] text-amber-600 mr-1"></i>GPS Belum Siap`;
+        }
+        if (alertBanner) alertBanner.classList.add('hidden');
+        if (locText) {
+            locText.innerHTML = `<span class="text-amber-700 font-bold flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation text-xs"></i> ⚠️ GPS Belum Aktif (${msg})</span>`;
+        }
+    }
+
+    // Tombol Refresh GPS Manual (Segarkan Koordinat)
+    function refreshGeofenceLocation(isManual = false) {
+        const refreshIcon = document.getElementById('geofenceRefreshIcon');
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+        if (!navigator.geolocation) {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            updateGeofenceUiError("Perangkat Anda tidak mendukung fitur GPS.");
+            return;
+        }
+
+        if (isManual) {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'info',
+                title: 'Menyelaraskan koordinat GPS...'
+            });
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const accuracy = Math.round(pos.coords.accuracy || 0);
+
+                teacherGps.lat = lat;
+                teacherGps.lng = lng;
+                teacherGps.accuracy = accuracy;
+                teacherGps.ready = true;
+                teacherGps.error = null;
+
                 const inLat = document.getElementById('inputLatitude');
                 const inLng = document.getElementById('inputLongitude');
                 if (inLat) inLat.value = lat;
@@ -1066,54 +1420,40 @@
 
                 const dist = calculateDistance(lat, lng, schoolConfig.lat, schoolConfig.lng);
                 teacherGps.distance = dist;
+                const isInside = dist <= schoolConfig.radius;
+                teacherGps.isInside = isInside;
 
-                if (dist <= schoolConfig.radius) {
-                    teacherGps.isInside = true;
-                    banner.className = "flex items-center justify-between bg-emerald-50 border border-emerald-300 px-space-md py-2.5 rounded-xl text-emerald-900 shadow-xs";
-                    icon.className = "material-symbols-outlined text-[20px] text-emerald-600 flex-shrink-0";
-                    icon.textContent = "verified_user";
-                    text.innerHTML = `<strong class="text-emerald-950 font-bold">Lokasi Valid:</strong> Terdeteksi <b>${dist} m</b> dari ${schoolConfig.name}`;
-                    badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Dalam Radius (${schoolConfig.radius}m)`;
-                    badge.className = "flex items-center gap-1 font-label-sm text-label-sm text-emerald-800 font-bold bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full";
-                } else {
-                    teacherGps.isInside = false;
-                    banner.className = "flex items-center justify-between bg-red-50 border border-red-300 px-space-md py-2.5 rounded-xl text-red-900 shadow-xs";
-                    icon.className = "material-symbols-outlined text-[20px] text-red-600 flex-shrink-0";
-                    icon.textContent = "location_off";
-                    text.innerHTML = `<strong class="text-red-950 font-bold">Di Luar Titik Lokasi:</strong> ${dist} m dari sekolah (Maksimal: ${schoolConfig.radius}m)`;
-                    badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Di Luar Area`;
-                    badge.className = "flex items-center gap-1 font-label-sm text-label-sm text-red-800 font-bold bg-red-100 border border-red-300 px-2.5 py-0.5 rounded-full";
-                }
+                applyGeofenceUiState(isInside, dist, accuracy, lat, lng, !schoolConfig.isGeofenceActive);
 
-                const locText = document.getElementById('scanLocationText');
-                if (locText) {
-                    locText.innerHTML = teacherGps.isInside 
-                        ? `<span class="text-emerald-700 font-semibold">📍 GPS Valid: Dalam Radius (${dist}m)</span>` 
-                        : `<span class="text-red-600 font-semibold">⛔ GPS: Di Luar Radius Sekolah (${dist}m)</span>`;
+                if (isManual) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2500,
+                        timerProgressBar: true
+                    });
+                    const distKm = (dist >= 1000) ? (dist / 1000).toFixed(2).replace('.', ',') + ' km' : dist + ' m';
+                    Toast.fire({
+                        icon: isInside ? 'success' : 'warning',
+                        title: isInside ? `📍 Dalam Radius: ${dist}m` : `⛔ Di Luar Radius: ${distKm}`
+                    });
                 }
             },
             function(err) {
-                let msg = "Izin lokasi GPS belum diaktifkan.";
-                if (err.code === 1) msg = "Izin GPS ditolak di browser Anda.";
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                let msg = "Gagal memperbarui lokasi GPS.";
+                if (err.code === 1) msg = "Izin akses lokasi ditolak.";
                 teacherGps.error = msg;
                 updateGeofenceUiError(msg);
             },
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
     }
 
-    function updateGeofenceUiError(msg) {
-        const banner = document.getElementById('geofenceBanner');
-        const icon = document.getElementById('geofenceIcon');
-        const text = document.getElementById('geofenceText');
-        const badge = document.getElementById('geofenceBadge');
-
-        banner.className = "flex items-center justify-between bg-amber-50 border border-amber-300 px-space-md py-2.5 rounded-xl text-amber-900";
-        icon.className = "material-symbols-outlined text-[20px] text-amber-600 flex-shrink-0";
-        icon.textContent = "warning";
-        text.innerHTML = `<strong class="text-amber-950 font-bold">GPS Belum Aktif:</strong> ${msg}`;
-        badge.textContent = "Aktifkan GPS";
-        badge.className = "font-label-sm text-label-sm text-amber-800 font-bold bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full";
+    // Alias fungsi untuk modal kamera
+    function fetchGpsLocation() {
+        refreshGeofenceLocation(false);
     }
 
     // Live Digital Clock WIB & Real-Time Schedule Checker
@@ -1153,8 +1493,8 @@
                     title: 'Presensi Belum Dibuka!',
                     html: `<div class="text-sm space-y-3 text-slate-700 text-left">
                              <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900">
-                               <p class="font-bold text-base mb-1">Belum Waktunya Presensi Masuk</p>
-                               <p class="text-xs">Sesuai jadwal sekolah, presensi masuk hari ini baru dibuka pada pukul <b>${scheduleConfig.timeIn} WIB</b>.</p>
+                                <p class="font-bold text-base mb-1">Belum Waktunya Presensi Masuk</p>
+                                <p class="text-xs">Sesuai jadwal sekolah, presensi masuk hari ini baru dibuka pada pukul <b>${scheduleConfig.timeIn} WIB</b>.</p>
                              </div>
                              <p class="text-xs text-slate-600">
                                Sesuai aturan presensi, guru tidak diperkenankan absen sebelum jam masuk yang telah dijadwalkan.
@@ -1172,8 +1512,8 @@
                     title: 'Presensi Masuk Telah Ditutup!',
                     html: `<div class="text-sm space-y-3 text-slate-700 text-left">
                              <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900">
-                               <p class="font-bold text-base mb-1">Jam Kegiatan Sekolah Berakhir</p>
-                               <p class="text-xs">Jam kepulangan sekolah hari ini telah selesai pada pukul <b>${scheduleConfig.timeOut} WIB</b>.</p>
+                                <p class="font-bold text-base mb-1">Jam Kegiatan Sekolah Berakhir</p>
+                                <p class="text-xs">Jam kepulangan sekolah hari ini telah selesai pada pukul <b>${scheduleConfig.timeOut} WIB</b>.</p>
                              </div>
                              <p class="text-xs text-slate-600">
                                Sesuai aturan absensi, guru yang belum absen masuk sampai jam kepulangan berakhir tidak dapat lagi melakukan presensi masuk hari ini.
@@ -1186,13 +1526,11 @@
             }
         }
 
-        // Presensi PULANG: Diperbolehkan kapan saja setelah absen masuk (fleksibel jika guru perlu pulang lebih awal)
-
         // 1. Validasi Registrasi Wajah
         if (!isTeacherFaceRegistered) {
             Swal.fire({
                 title: 'Wajah Belum Terdaftar!',
-                html: '<div class="text-sm text-slate-600 space-y-2"><p>Halo <b>{{ $teacher->name }}</b>,</p><p>Anda belum mendaftarkan wajah di sistem HadirGuru. Perekaman wajah diperlukan satu kali agar sistem mengenali siapa yang absen dan mencegah kecurangan presensi.</p></div>',
+                html: '<div class="text-sm text-slate-600 space-y-2"><p>Halo <b>{{ $teacher->name }}</b>,</p><p>Anda belum mendaftarkan wajah di sistem SIMPRES BU. Perekaman wajah diperlukan satu kali agar sistem mengenali siapa yang absen dan mencegah kecurangan presensi.</p></div>',
                 icon: 'warning',
                 confirmButtonColor: '#004ac6',
                 confirmButtonText: 'Mulai Rekam Wajah Sekarang',
@@ -1215,28 +1553,52 @@
                     icon: 'info',
                     confirmButtonColor: '#004ac6',
                     confirmButtonText: 'Coba Lagi'
+                }).then(() => {
+                    refreshGeofenceLocation(true);
                 });
                 return;
             }
 
             if (!teacherGps.isInside) {
+                const dist = teacherGps.distance || 0;
+                const distKm = (dist >= 1000) ? (dist / 1000).toFixed(2).replace('.', ',') + ' km' : dist + ' meter';
+                const excess = Math.max(0, dist - schoolConfig.radius);
+                const excessKm = (excess >= 1000) ? (excess / 1000).toFixed(2).replace('.', ',') + ' km' : excess + ' meter';
+
                 Swal.fire({
                     icon: 'error',
-                    title: 'Di Luar Titik Lokasi Sekolah!',
+                    title: 'Di Luar Jangkauan Sekolah!',
                     html: `<div class="text-sm space-y-3 text-slate-700 text-left">
-                             <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-900">
-                               <p class="font-bold text-base mb-1">Presensi Tidak Dapat Dilakukan</p>
-                               <p class="text-xs">Posisi Anda terdeteksi <b>${teacherGps.distance} meter</b> dari titik sekolah.</p>
+                             <div class="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950">
+                               <p class="font-extrabold text-sm mb-1 flex items-center gap-1.5 text-rose-900">
+                                 <i class="fa-solid fa-location-crosshairs text-rose-600"></i>
+                                 <span>Presensi Tidak Dapat Dilakukan</span>
+                               </p>
+                               <p class="text-xs leading-relaxed">
+                                 Posisi Anda saat ini berjarak <b>${distKm} (${dist} meter)</b> dari titik sekolah.
+                               </p>
+                               <div class="mt-2 pt-2 border-t border-rose-200 text-[11px] space-y-0.5">
+                                 <p>• Batas radius maksimal: <b>${schoolConfig.radius} meter</b></p>
+                                 <p>• Selisih di luar radius: <b class="text-rose-700">+${excessKm}</b></p>
+                                 <p>• Lokasi tujuan: <b>${schoolConfig.name}</b></p>
+                               </div>
                              </div>
-                             <p class="text-xs text-slate-600">
-                               Administrator menetapkan batas radius presensi maksimal <b>${schoolConfig.radius} meter</b> dari lingkungan <b>${schoolConfig.name}</b>.
+                             <p class="text-xs text-slate-600 leading-relaxed">
+                               Administrator menetapkan batas radius geofence agar presensi hanya dapat dilakukan di dalam lingkungan sekolah.
                              </p>
-                             <p class="text-xs font-semibold text-slate-800">
-                               Silakan berada di dalam area sekolah untuk melakukan Presensi ${type.toUpperCase()}.
-                             </p>
+                             <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs">
+                               <span class="font-bold">Saran:</span> Silakan berada di dalam area sekolah, lalu tekan tombol <b>Segarkan GPS</b> pada radar lokasi.
+                             </div>
                            </div>`,
                     confirmButtonColor: '#dc2626',
-                    confirmButtonText: 'Saya Mengerti'
+                    confirmButtonText: 'Saya Mengerti',
+                    showCancelButton: true,
+                    cancelButtonText: 'Segarkan GPS',
+                    cancelButtonColor: '#004ac6'
+                }).then((res) => {
+                    if (res.dismiss === Swal.DismissReason.cancel) {
+                        refreshGeofenceLocation(true);
+                    }
                 });
                 return;
             }
@@ -1769,12 +2131,21 @@
         // Validasi Ketat Geofence Titik Lokasi
         if (schoolConfig.isGeofenceActive && schoolConfig.lat && schoolConfig.lng) {
             if (!teacherGps.isInside) {
+                const dist = teacherGps.distance || 0;
+                const distKm = (dist >= 1000) ? (dist / 1000).toFixed(2).replace('.', ',') + ' km' : dist + ' meter';
+                const excess = Math.max(0, dist - schoolConfig.radius);
+                const excessKm = (excess >= 1000) ? (excess / 1000).toFixed(2).replace('.', ',') + ' km' : excess + ' meter';
+
                 Swal.fire({
                     icon: 'error',
                     title: 'Gagal! Di Luar Titik Lokasi',
-                    html: `<div class="text-sm space-y-2 text-slate-700">
-                             <p>Lokasi Anda (${teacherGps.distance || '?'} meter) berada di luar batas titik radius sekolah (maksimal ${schoolConfig.radius} meter).</p>
-                             <p class="text-xs text-red-600 font-semibold">Absensi ${currentScanType.toUpperCase()} dibatalkan. Silakan berada di area sekolah.</p>
+                    html: `<div class="text-sm space-y-2 text-slate-700 text-left">
+                             <div class="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-950">
+                               <p class="font-bold text-xs text-rose-900 mb-1">Presensi ${currentScanType.toUpperCase()} Ditolak</p>
+                               <p class="text-xs">Posisi Anda (${distKm}) berada di luar batas radius sekolah (maksimal ${schoolConfig.radius} meter).</p>
+                               <p class="text-[11px] text-rose-700 font-semibold mt-1">• Selisih di luar radius: +${excessKm}</p>
+                             </div>
+                             <p class="text-xs text-slate-600">Absensi dibatalkan. Anda wajib berada di dalam area lingkungan ${schoolConfig.name}.</p>
                            </div>`,
                     confirmButtonColor: '#dc2626',
                     confirmButtonText: 'Tutup'

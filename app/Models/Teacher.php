@@ -16,6 +16,8 @@ class Teacher extends Model
         'name',
         'subject',
         'employment_status',
+        'teaches_in_foundation',
+        'foundation_name',
         'education',
         'class_duty',
         'gender',
@@ -35,8 +37,66 @@ class Teacher extends Model
         return $this->belongsTo(School::class);
     }
 
+    public function schools()
+    {
+        return $this->belongsToMany(School::class, 'school_teacher')
+            ->withPivot('is_primary', 'subject', 'class_duty')
+            ->withTimestamps();
+    }
+
+    public function hasSchool($schoolId): bool
+    {
+        if ((int) $this->school_id === (int) $schoolId) {
+            return true;
+        }
+        return $this->schools()->where('schools.id', $schoolId)->exists();
+    }
+
+    public function getAssignedSchoolsAttribute()
+    {
+        $pivotSchools = $this->schools()->where('schools.is_active', true)->get();
+        if ($this->school_id && !$pivotSchools->contains('id', $this->school_id)) {
+            $mainSchool = $this->school;
+            if ($mainSchool) {
+                $pivotSchools->prepend($mainSchool);
+            }
+        }
+        return $pivotSchools;
+    }
+
+    public function isMultiSchool(): bool
+    {
+        return $this->assigned_schools->count() > 1;
+    }
+
+    public function getFoundationNameAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+        // Fallback jika mengajar di yayasan
+        if ($this->attributes['teaches_in_foundation'] ?? true) {
+            if ($this->school && !empty($this->school->foundation_name)) {
+                return $this->school->foundation_name;
+            }
+            $setting = AttendanceSetting::getGlobalSetting();
+            return $setting->foundation_name ?? 'Yayasan Bahrul Ulum';
+        }
+        return null;
+    }
+
+    public function getFoundationStatusLabelAttribute(): string
+    {
+        if ($this->teaches_in_foundation) {
+            $name = $this->foundation_name ?: 'Yayasan';
+            return "Mengajar di Yayasan ({$name})";
+        }
+        return 'Non-Yayasan';
+    }
+
     protected $casts = [
         'is_active' => 'boolean',
+        'teaches_in_foundation' => 'boolean',
         'birth_date' => 'date',
         'face_registered_at' => 'datetime',
     ];

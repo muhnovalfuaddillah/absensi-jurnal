@@ -46,7 +46,13 @@ class AdminAcademicController extends Controller
         $schedules = $query->paginate(20)->withQueryString();
 
         $classes = SchoolClass::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
-        $teachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $teachers = Teacher::where('is_active', true)
+            ->where(function ($q) use ($schoolId) {
+                $q->where('school_id', $schoolId)
+                  ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+            })
+            ->orderBy('name')
+            ->get();
         $subjects = Subject::where('school_id', $schoolId)->orderBy('name')->get();
 
         return view('admin.academic.schedules_index', compact('schedules', 'classes', 'teachers', 'subjects', 'day', 'classId', 'teacherId'));
@@ -116,7 +122,13 @@ class AdminAcademicController extends Controller
             ->orderBy('name')
             ->get();
 
-        $teachers = Teacher::where('school_id', $schoolId)->where('is_active', true)->orderBy('name')->get();
+        $teachers = Teacher::where('is_active', true)
+            ->where(function ($q) use ($schoolId) {
+                $q->where('school_id', $schoolId)
+                  ->orWhereHas('schools', fn($s) => $s->where('schools.id', $schoolId));
+            })
+            ->orderBy('name')
+            ->get();
 
         return view('admin.academic.classes_index', compact('classes', 'teachers'));
     }

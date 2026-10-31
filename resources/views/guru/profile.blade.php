@@ -286,6 +286,33 @@
                            placeholder="Contoh: Wali Kelas 7A, Pembina OSIS"
                            class="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#13793e] focus:bg-white transition-all">
                 </div>
+
+                <!-- Keterangan Mengajar di Yayasan & Nama Yayasan (Dapodik) -->
+                <div class="sm:col-span-2 p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="teaches_in_foundation" id="guru_teaches_in_foundation" value="1"
+                                   {{ old('teaches_in_foundation', $teacher->teaches_in_foundation ?? true) ? 'checked' : '' }}
+                                   onchange="document.getElementById('guru_foundation_name_wrapper').style.display = this.checked ? 'block' : 'none'"
+                                   class="w-4 h-4 text-[#13793e] rounded border-slate-300 focus:ring-[#13793e]">
+                            <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-building-columns text-[#13793e]"></i>
+                                <span>Mengajar di Bawah Naungan Yayasan</span>
+                            </span>
+                        </label>
+                        <span class="text-[10px] font-extrabold text-[#13793e] bg-emerald-100/70 px-2 py-0.5 rounded-full">Data Dapodik</span>
+                    </div>
+
+                    <div id="guru_foundation_name_wrapper" style="display: {{ old('teaches_in_foundation', $teacher->teaches_in_foundation ?? true) ? 'block' : 'none' }}">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Nama Yayasan
+                        </label>
+                        <input type="text" name="foundation_name" value="{{ old('foundation_name', $teacher->foundation_name ?: ($teacher->school->foundation_name ?? 'Yayasan Bahrul Ulum')) }}"
+                               placeholder="Contoh: Yayasan Bahrul Ulum"
+                               class="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-emerald-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#13793e] transition-all">
+                        <span class="block text-[10px] text-slate-500 mt-1 font-medium">Keterangan nama yayasan tempat bertugas sesuai data dapodik / kepegawaian yayasan.</span>
+                    </div>
+                </div>
             </div>
         </div>
 

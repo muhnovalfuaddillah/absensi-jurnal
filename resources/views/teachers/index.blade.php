@@ -13,15 +13,22 @@
                     <span class="material-symbols-outlined text-[24px]">badge</span>
                 </div>
                 <div>
-                    <h1 class="font-headline-lg text-headline-lg text-on-surface">Data Master Guru & Tendik</h1>
+                    <h1 class="font-headline-lg text-headline-lg text-on-surface">Data Master Guru & Tendik (Dapodik)</h1>
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                        Kelola data profil lengkap dewan guru, riwayat kepegawaian, dan akun login portal mandiri.
+                        Kelola data profil guru, data dapodik & penugasan yayasan, riwayat kepegawaian, dan akun login portal mandiri.
                     </p>
                 </div>
             </div>
         </div>
 
         <div class="flex items-center gap-space-sm flex-wrap">
+            @if(isset($unlinkedTeachers) && $unlinkedTeachers->count() > 0)
+                <button type="button" onclick="openLinkTeacherModal()"
+                        class="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 font-label-lg text-label-lg shadow-2xs hover:bg-emerald-100 transition-all active:scale-[0.98]">
+                    <span class="material-symbols-outlined text-[20px] text-emerald-600">link</span>
+                    <span>Tautkan Guru dari Sekolah Lain ({{ $unlinkedTeachers->count() }})</span>
+                </button>
+            @endif
             <button type="button" onclick="openAddTeacherModal()"
                     class="inline-flex items-center gap-2 px-space-md py-2.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg shadow-sm hover:opacity-95 transition-all active:scale-[0.98]">
                 <span class="material-symbols-outlined text-[20px]">person_add</span>
@@ -93,14 +100,14 @@
 
     <!-- Filter & Search Bar -->
     <div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm border border-surface-container">
-        <form method="GET" action="{{ route('admin.teachers.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <form method="GET" action="{{ route('admin.teachers.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             <!-- Search Text -->
             <div class="lg:col-span-2">
-                <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Cari Guru</label>
+                <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Cari Guru / Dapodik</label>
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">search</span>
                     <input type="text" name="search" value="{{ $search }}" 
-                           placeholder="Cari nama guru, NIP, NUPTK, mata pelajaran..."
+                           placeholder="Cari nama, NIP, NUPTK, mapel, yayasan..."
                            class="w-full pl-9 pr-3 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface placeholder:text-outline border border-surface-container focus:border-primary focus:outline-none">
                 </div>
             </div>
@@ -118,8 +125,19 @@
                 </select>
             </div>
 
+            <!-- Filter Mengajar di Yayasan -->
+            <div>
+                <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Mengajar di Yayasan</label>
+                <select name="foundation_status" onchange="this.form.submit()"
+                        class="w-full px-3 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface border border-surface-container focus:border-primary focus:outline-none">
+                    <option value="">Semua (Yayasan & Luar)</option>
+                    <option value="1" {{ $foundationStatus === '1' ? 'selected' : '' }}>Mengajar di Yayasan</option>
+                    <option value="0" {{ $foundationStatus === '0' ? 'selected' : '' }}>Non-Yayasan (Luar)</option>
+                </select>
+            </div>
+
             <!-- Filter Keaktifan & Tombol -->
-            <div class="flex items-end gap-2">
+            <div class="flex items-end gap-2 lg:col-span-2">
                 <div class="flex-1">
                     <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Status Aktif</label>
                     <select name="status" onchange="this.form.submit()"
@@ -131,7 +149,7 @@
                 </div>
 
                 <a href="{{ route('admin.teachers.index') }}" 
-                   class="py-2 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-label-md text-label-md transition-colors h-[38px] flex items-center justify-center"
+                   class="py-2 px-3 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-label-md text-label-md transition-colors h-[38px] flex items-center justify-center shrink-0"
                    title="Reset Filter">
                     <span class="material-symbols-outlined text-[18px]">restart_alt</span>
                 </a>
@@ -212,12 +230,22 @@
                                 @else
                                     <span class="font-body-sm text-body-sm text-on-surface-variant">Guru Mata Pelajaran</span>
                                 @endif
+
+                                @if($t->assigned_schools->count() > 1)
+                                    <div class="flex items-center gap-1 flex-wrap mt-1.5">
+                                        @foreach($t->assigned_schools as $sch)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold {{ $sch->id == current_school_id() ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-surface-container text-on-surface-variant' }}">
+                                                {{ $sch->name }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
                         </td>
 
                         <!-- Status Kepegawaian & Pendidikan -->
                         <td class="py-space-md px-space-md">
-                            <div class="flex flex-col gap-0.5">
+                            <div class="flex flex-col gap-1">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm font-semibold w-max
                                     {{ str_contains($t->employment_status, 'Tetap') ? 'bg-emerald-100 text-emerald-800' : '' }}
                                     {{ str_contains($t->employment_status, 'Honorer') || str_contains($t->employment_status, 'GTT') ? 'bg-amber-100 text-amber-800' : '' }}
@@ -225,6 +253,21 @@
                                     {{ !str_contains($t->employment_status, 'Tetap') && !str_contains($t->employment_status, 'Honorer') && !str_contains($t->employment_status, 'GTT') && !str_contains($t->employment_status, 'PNS') ? 'bg-surface-container text-on-surface' : '' }}">
                                     {{ $t->employment_status ?: 'Guru Tetap' }}
                                 </span>
+
+                                @if($t->teaches_in_foundation)
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 w-max"
+                                          title="Mengajar di Bawah Naungan Yayasan: {{ $t->foundation_name ?: ($defaultFoundationName ?? 'Yayasan Bahrul Ulum') }}">
+                                        <span class="material-symbols-outlined text-[13px] text-emerald-600">corporate_fare</span>
+                                        <span>Yayasan: <strong>{{ $t->foundation_name ?: ($defaultFoundationName ?? 'Yayasan Bahrul Ulum') }}</strong></span>
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 w-max"
+                                          title="Bukan guru yayasan (Guru Luar/Non-Yayasan)">
+                                        <span class="material-symbols-outlined text-[13px]">domain_disabled</span>
+                                        <span>Non-Yayasan</span>
+                                    </span>
+                                @endif
+
                                 @if($t->education)
                                     <span class="font-body-sm text-body-sm text-on-surface-variant">
                                         {{ $t->education }}
@@ -536,6 +579,57 @@
                         <input type="text" name="class_duty" placeholder="Contoh: Wali Kelas XII MIPA 1"
                                class="w-full px-3 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface border border-surface-container focus:border-primary focus:outline-none">
                     </div>
+
+                    <!-- Keterangan Mengajar di Yayasan & Nama Yayasan (Dapodik) -->
+                    <div class="sm:col-span-2 p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="teaches_in_foundation" id="add_teaches_in_foundation" value="1" checked
+                                       onchange="document.getElementById('add_foundation_name_wrapper').style.display = this.checked ? 'block' : 'none'"
+                                       class="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary">
+                                <span class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-primary text-[18px]">corporate_fare</span>
+                                    <span>Mengajar di Bawah Naungan Yayasan</span>
+                                </span>
+                            </label>
+                            <span class="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">Data Dapodik</span>
+                        </div>
+                        <div id="add_foundation_name_wrapper" class="mt-2">
+                            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">
+                                Nama Yayasan <span class="text-error">*</span>
+                            </label>
+                            <input type="text" name="foundation_name" value="{{ $defaultFoundationName ?? 'Yayasan Bahrul Ulum' }}" placeholder="Contoh: Yayasan Bahrul Ulum"
+                                   class="w-full px-3 py-2 bg-surface-container-lowest rounded-lg font-body-sm text-body-sm font-semibold text-on-surface border border-surface-container focus:border-primary focus:outline-none">
+                            <span class="font-body-sm text-[11px] text-on-surface-variant mt-1 block">Keterangan nama yayasan tempat bertugas sesuai data dapodik / kepegawaian yayasan.</span>
+                        </div>
+                    </div>
+
+                    <!-- Penugasan Sekolah (Multi-Sekolah) -->
+                    @if(isset($allSchools) && $allSchools->count() > 1)
+                    <div class="sm:col-span-2 p-3 bg-surface-container-lowest rounded-xl border border-surface-container">
+                        <label class="block font-label-sm text-label-sm text-on-surface font-bold mb-0.5">
+                            🏢 Penugasan Sekolah (Multi-Sekolah)
+                        </label>
+                        <p class="font-body-sm text-[11px] text-on-surface-variant mb-2">
+                            Centang sekolah tempat guru ini mengajar (misal: MTs dan MA). Guru dapat beralih sekolah dengan 1 akun yang sama.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach($allSchools as $sch)
+                                <label class="flex items-center gap-2 p-2 rounded-lg bg-surface-container-low hover:bg-surface-container cursor-pointer border border-surface-container transition-colors">
+                                    <input type="checkbox" name="school_ids[]" value="{{ $sch->id }}"
+                                           {{ $sch->id == current_school_id() ? 'checked' : '' }}
+                                           class="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <div class="w-6 h-6 rounded bg-white p-0.5 border border-slate-200 shrink-0">
+                                            <img src="{{ $sch->logo_url }}" class="w-full h-full object-contain">
+                                        </div>
+                                        <span class="text-xs font-semibold text-on-surface truncate">{{ $sch->name }}</span>
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -716,6 +810,30 @@
                                class="w-full px-3 py-2 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface border border-surface-container focus:border-primary focus:outline-none">
                     </div>
 
+                    <!-- Keterangan Mengajar di Yayasan & Nama Yayasan (Dapodik) -->
+                    <div class="sm:col-span-2 p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" name="teaches_in_foundation" id="edit_teaches_in_foundation" value="1"
+                                       onchange="document.getElementById('edit_foundation_name_wrapper').style.display = this.checked ? 'block' : 'none'"
+                                       class="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary">
+                                <span class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-primary text-[18px]">corporate_fare</span>
+                                    <span>Mengajar di Bawah Naungan Yayasan</span>
+                                </span>
+                            </label>
+                            <span class="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">Data Dapodik</span>
+                        </div>
+                        <div id="edit_foundation_name_wrapper" class="mt-2">
+                            <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">
+                                Nama Yayasan <span class="text-error">*</span>
+                            </label>
+                            <input type="text" name="foundation_name" id="edit_foundation_name" placeholder="Contoh: Yayasan Bahrul Ulum"
+                                   class="w-full px-3 py-2 bg-surface-container-lowest rounded-lg font-body-sm text-body-sm font-semibold text-on-surface border border-surface-container focus:border-primary focus:outline-none">
+                            <span class="font-body-sm text-[11px] text-on-surface-variant mt-1 block">Keterangan nama yayasan tempat bertugas sesuai data dapodik / kepegawaian yayasan.</span>
+                        </div>
+                    </div>
+
                     <div class="sm:col-span-2">
                         <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Status Keaktifan Mengajar</label>
                         <select name="is_active" id="edit_is_active" required
@@ -724,6 +842,32 @@
                             <option value="0">Non-Aktif / Cuti</option>
                         </select>
                     </div>
+
+                    <!-- Penugasan Sekolah (Multi-Sekolah) -->
+                    @if(isset($allSchools) && $allSchools->count() > 1)
+                    <div class="sm:col-span-2 p-3 bg-surface-container-lowest rounded-xl border border-surface-container">
+                        <label class="block font-label-sm text-label-sm text-on-surface font-bold mb-0.5">
+                            🏢 Penugasan Sekolah (Multi-Sekolah)
+                        </label>
+                        <p class="font-body-sm text-[11px] text-on-surface-variant mb-2">
+                            Centang sekolah tempat guru ini ditugaskan mengajar:
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            @foreach($allSchools as $sch)
+                                <label class="flex items-center gap-2 p-2 rounded-lg bg-surface-container-low hover:bg-surface-container cursor-pointer border border-surface-container transition-colors">
+                                    <input type="checkbox" name="school_ids[]" value="{{ $sch->id }}" id="edit_school_{{ $sch->id }}"
+                                           class="w-4 h-4 text-primary rounded border-outline-variant focus:ring-primary edit-school-checkbox">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <div class="w-6 h-6 rounded bg-white p-0.5 border border-slate-200 shrink-0">
+                                            <img src="{{ $sch->logo_url }}" class="w-full h-full object-contain">
+                                        </div>
+                                        <span class="text-xs font-semibold text-on-surface truncate">{{ $sch->name }}</span>
+                                    </div>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -815,6 +959,14 @@
                 <span class="text-on-surface-variant">Pendidikan:</span>
                 <span id="detail_education" class="text-on-surface"></span>
             </div>
+            <div class="flex justify-between py-1.5 items-center">
+                <span class="text-on-surface-variant">Mengajar di Yayasan:</span>
+                <span id="detail_teaches_in_foundation" class="text-xs font-semibold px-2 py-0.5 rounded-full"></span>
+            </div>
+            <div class="flex justify-between py-1.5" id="detail_foundation_name_row">
+                <span class="text-on-surface-variant">Nama Yayasan:</span>
+                <strong id="detail_foundation_name" class="text-emerald-800 font-bold"></strong>
+            </div>
             <div class="flex justify-between py-1.5">
                 <span class="text-on-surface-variant">Tempat, Tgl Lahir:</span>
                 <span id="detail_ttl" class="text-on-surface"></span>
@@ -897,8 +1049,66 @@
     </div>
 </div>
 
+<!-- Modal Tautkan Guru dari Sekolah Lain -->
+<div id="linkTeacherModal" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest w-full max-w-lg rounded-2xl p-space-lg shadow-xl border border-surface-container flex flex-col gap-space-md animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between pb-3 border-b border-surface-container">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">link</span>
+                </div>
+                <div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tautkan Guru dari Sekolah Lain</h3>
+                    <p class="font-body-sm text-[11px] text-on-surface-variant">Hubungkan guru yang sudah terdaftar di yayasan agar bisa mengajar di sekolah ini</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeLinkTeacherModal()" class="w-8 h-8 rounded-lg bg-surface-container text-on-surface-variant hover:bg-surface-container-high flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <form action="{{ route('admin.teachers.link_existing') }}" method="POST" class="flex flex-col gap-space-md">
+            @csrf
+            <div>
+                <label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">
+                    Pilih Guru yang Ingin Ditautkan <span class="text-error">*</span>
+                </label>
+                <select name="teacher_id" required class="w-full px-3 py-2.5 bg-surface-container-low rounded-lg font-body-sm text-body-sm text-on-surface border border-surface-container focus:border-primary focus:outline-none">
+                    <option value="">-- Pilih Guru Terdaftar --</option>
+                    @if(isset($unlinkedTeachers))
+                        @foreach($unlinkedTeachers as $ut)
+                            <option value="{{ $ut->id }}">
+                                {{ $ut->name }} (Asal: {{ $ut->school->name ?? 'Sekolah Lain' }} • {{ $ut->subject ?: 'Guru' }})
+                            </option>
+                        @endforeach
+                    @endif
+                </select>
+                <span class="font-body-sm text-[11px] text-on-surface-variant mt-1.5 block">
+                    Guru yang ditautkan dapat menggunakan 1 akun login & data wajah Face ID yang sama untuk absen di kedua sekolah.
+                </span>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-container">
+                <button type="button" onclick="closeLinkTeacherModal()" class="px-space-md py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high">
+                    Batal
+                </button>
+                <button type="submit" class="px-space-lg py-2 rounded-lg bg-emerald-600 text-white font-label-md text-label-md shadow-sm hover:opacity-95">
+                    Tautkan Guru Sekarang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+    function openLinkTeacherModal() {
+        document.getElementById('linkTeacherModal').classList.remove('hidden');
+    }
+    function closeLinkTeacherModal() {
+        document.getElementById('linkTeacherModal').classList.add('hidden');
+    }
+
     function openAddTeacherModal() {
         document.getElementById('addTeacherModal').classList.remove('hidden');
     }
@@ -921,6 +1131,28 @@
         document.getElementById('edit_education').value = t.education || '';
         document.getElementById('edit_class_duty').value = t.class_duty || '';
         document.getElementById('edit_is_active').value = t.is_active ? '1' : '0';
+
+        // Mengajar di Yayasan & Nama Yayasan
+        const teachesInFoundation = t.teaches_in_foundation === 1 || t.teaches_in_foundation === true || t.teaches_in_foundation === '1';
+        const editFoundationCb = document.getElementById('edit_teaches_in_foundation');
+        if (editFoundationCb) {
+            editFoundationCb.checked = teachesInFoundation;
+            document.getElementById('edit_foundation_name_wrapper').style.display = teachesInFoundation ? 'block' : 'none';
+        }
+        document.getElementById('edit_foundation_name').value = t.foundation_name || '{{ $defaultFoundationName ?? 'Yayasan Bahrul Ulum' }}';
+
+        // Checkboxes sekolah
+        document.querySelectorAll('.edit-school-checkbox').forEach(cb => cb.checked = false);
+        if (t.schools && t.schools.length > 0) {
+            t.schools.forEach(s => {
+                const cb = document.getElementById('edit_school_' + s.id);
+                if (cb) cb.checked = true;
+            });
+        }
+        if (t.school_id) {
+            const cb = document.getElementById('edit_school_' + t.school_id);
+            if (cb) cb.checked = true;
+        }
 
         if (user) {
             document.getElementById('edit_username').value = user.username || '';
@@ -957,6 +1189,24 @@
         document.getElementById('detail_gender').textContent = t.gender === 'L' ? 'Laki-laki' : 'Perempuan';
         document.getElementById('detail_class_duty').textContent = t.class_duty || '-';
         document.getElementById('detail_education').textContent = t.education || '-';
+
+        // Mengajar di Yayasan & Nama Yayasan
+        const teachesFoundation = t.teaches_in_foundation === 1 || t.teaches_in_foundation === true || t.teaches_in_foundation === '1';
+        const yayasanEl = document.getElementById('detail_teaches_in_foundation');
+        const yayasanRow = document.getElementById('detail_foundation_name_row');
+        if (yayasanEl) {
+            if (teachesFoundation) {
+                yayasanEl.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+                yayasanEl.innerHTML = '<span class="material-symbols-outlined text-[13px]">check_circle</span> Mengajar di Yayasan';
+                if (yayasanRow) yayasanRow.style.display = 'flex';
+                document.getElementById('detail_foundation_name').textContent = t.foundation_name || '{{ $defaultFoundationName ?? 'Yayasan Bahrul Ulum' }}';
+            } else {
+                yayasanEl.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 flex items-center gap-1';
+                yayasanEl.innerHTML = '<span class="material-symbols-outlined text-[13px]">cancel</span> Bukan / Non-Yayasan';
+                if (yayasanRow) yayasanRow.style.display = 'none';
+            }
+        }
+
         document.getElementById('detail_ttl').textContent = (t.birth_place ? t.birth_place + ', ' : '') + (t.birth_date ? t.birth_date.substring(0, 10) : '-');
         document.getElementById('detail_phone').textContent = t.phone || '-';
         document.getElementById('detail_address').textContent = t.address || '-';

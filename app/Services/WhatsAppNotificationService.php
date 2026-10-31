@@ -65,7 +65,7 @@ class WhatsAppNotificationService
 
         $msg .= "\nTerima kasih atas kerja sama dan perhatian Bapak/Ibu.\n";
         $msg .= "━━━━━━━━━━━━━━━━━━━━━\n";
-        $msg .= "_{$schoolName} - Sistem Presensi Digital HadirGuru_";
+        $msg .= "_{$schoolName} - SIMPRES BU (Sistem Presensi Bahrul Ulum)_";
 
         return $msg;
     }

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Laporan & Rekapitulasi Presensi Siswa - HadirGuru')
+@section('title', 'Laporan & Rekapitulasi Presensi Siswa - SIMPRES BU')
 
 @section('content')
 <div class="flex flex-col gap-space-md">

@@ -4,14 +4,14 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
     <meta content="mobile_tab" name="shell-type"/>
-    <title>@yield('title', 'HadirGuru - Presensi Guru Modern')</title>
+    <title>@yield('title', 'SIMPRES BU - Sistem Informasi Manajemen Presensi Bahrul Ulum')</title>
     <link rel="icon" type="image/jpeg" href="{{ asset('logo.jpg') }}">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#004ac6">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="HadirGuru">
+    <meta name="apple-mobile-web-app-title" content="SIMPRES BU">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -189,9 +189,23 @@
                     <h1 class="text-sm font-extrabold text-slate-900 tracking-tight leading-tight truncate">
                         @yield('header_title', 'Beranda Dashboard')
                     </h1>
-                    <span class="text-[11px] text-slate-500 font-medium truncate leading-tight">
-                        {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }} • {{ $appSetting->school_name ?? 'Madrasah' }}
-                    </span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[11px] text-slate-500 font-medium truncate leading-tight">
+                            {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}
+                        </span>
+                        @if($currentTeacher && $currentTeacher->isMultiSchool())
+                            <button type="button" onclick="openGuruSchoolModal()" title="Klik untuk beralih sekolah"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-[#13793e] font-bold text-[10px] hover:bg-emerald-200 transition-all border border-emerald-300 shadow-2xs">
+                                <i class="fa-solid fa-repeat text-[9px]"></i>
+                                <span class="max-w-[110px] truncate">{{ $appSetting->school_name ?? 'Madrasah' }}</span>
+                                <i class="fa-solid fa-chevron-down text-[8px]"></i>
+                            </button>
+                        @else
+                            <span class="text-[11px] text-slate-500 font-medium truncate leading-tight">
+                                • {{ $appSetting->school_name ?? 'Madrasah' }}
+                            </span>
+                        @endif
+                    </div>
                 </div>
             </div>
 
@@ -542,6 +556,80 @@
                 popup: 'rounded-2xl shadow-xl'
             }
         });
+    </script>
+    @endif
+
+    <!-- Modal / Bottom Sheet Pilihan Sekolah bagi Guru Multi-Sekolah -->
+    @if($currentTeacher && $currentTeacher->isMultiSchool())
+    <div id="guruSchoolModal" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+        <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 shadow-2xl flex flex-col gap-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 text-[#13793e] flex items-center justify-center shadow-xs">
+                        <i class="fa-solid fa-school text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">Pilih Madrasah / Sekolah</h3>
+                        <p class="text-[11px] text-slate-500">Anda mengajar di {{ $currentTeacher->assigned_schools->count() }} sekolah yang berbeda</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeGuruSchoolModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2.5">
+                @foreach($currentTeacher->assigned_schools as $sch)
+                    @php $isActive = (current_school_id() == $sch->id); @endphp
+                    <form action="{{ route('guru.switch_school') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="school_id" value="{{ $sch->id }}">
+                        <button type="submit" {{ $isActive ? 'disabled' : '' }}
+                                class="w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 {{ $isActive ? 'bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-500/20' : 'bg-slate-50 hover:bg-white border-slate-200 hover:border-emerald-300 hover:shadow-xs' }}">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-11 h-11 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0">
+                                    <img src="{{ $sch->logo_url }}" class="w-full h-full object-contain rounded-lg" onerror="this.onerror=null;this.src='{{ asset('logo.jpg') }}';">
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <h4 class="text-xs font-bold text-slate-900 truncate">{{ $sch->name }}</h4>
+                                        @if($sch->id == $currentTeacher->school_id)
+                                            <span class="text-[9px] font-semibold bg-blue-100 text-blue-700 px-1.5 py-0.2 rounded">Induk</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-[10px] text-slate-500 truncate mt-0.5">{{ $sch->address ?: ($sch->foundation_name ?: 'Madrasah') }}</p>
+                                </div>
+                            </div>
+
+                            <div class="shrink-0">
+                                @if($isActive)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold shadow-xs">
+                                        <i class="fa-solid fa-check text-[9px]"></i> Aktif
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-slate-600 border border-slate-200 text-[10px] font-semibold hover:border-emerald-500 hover:text-emerald-700">
+                                        Beralih <i class="fa-solid fa-arrow-right text-[8px]"></i>
+                                    </span>
+                                @endif
+                            </div>
+                        </button>
+                    </form>
+                @endforeach
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Peralihan sekolah menyesuaikan jadwal, presensi & kelas.</span>
+                <button type="button" onclick="closeGuruSchoolModal()" class="text-slate-600 font-bold hover:underline">Tutup</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function openGuruSchoolModal() {
+            document.getElementById('guruSchoolModal').classList.remove('hidden');
+        }
+        function closeGuruSchoolModal() {
+            document.getElementById('guruSchoolModal').classList.add('hidden');
+        }
     </script>
     @endif
 

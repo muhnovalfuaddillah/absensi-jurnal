@@ -16,16 +16,19 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check()) {
+            if (Auth::user()->isSuperAdmin()) {
+                return redirect()->route('superadmin.dashboard');
+            }
             if (Auth::user()->isAdmin()) {
                 return redirect()->route('admin.dashboard');
             }
             return redirect()->route('guru.dashboard');
         }
 
-        $setting = \App\Models\AttendanceSetting::getSettings();
-        $todaySchedule = $setting->getScheduleForDate(now());
+        $setting = \App\Models\AttendanceSetting::getGlobalSetting();
+        $schools = \App\Models\School::where('is_active', true)->orderBy('name')->get();
 
-        return view('auth.login', compact('setting', 'todaySchedule'));
+        return view('auth.login', compact('setting', 'schools'));
     }
 
     /**

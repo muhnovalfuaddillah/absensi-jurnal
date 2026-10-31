@@ -1,7 +1,7 @@
 {
-  "name": "E-Presensi MTS SYAFIIYAH",
-  "short_name": "E-Presensi",
-  "description": "Sistem Presensi Guru & Karyawan MTS SYAFIIYAH",
+  "name": "SIMPRES BU - Sistem Informasi Manajemen Presensi Bahrul Ulum",
+  "short_name": "SIMPRES BU",
+  "description": "Sistem Informasi Manajemen Presensi Bahrul Ulum",
   "id": "/login",
   "start_url": "/login",
   "scope": "/",

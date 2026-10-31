@@ -13,7 +13,29 @@ use Illuminate\Support\Facades\Storage;
 class GuruPortalController extends Controller
 {
     /**
-     * Dashboard Personal Guru (HANYA melihat data miliknya sendiri)
+     * Beralih Sekolah Aktif bagi Guru yang Mengajar di Banyak Sekolah (Multi-Sekolah)
+     */
+    public function switchSchool(Request $request)
+    {
+        $request->validate([
+            'school_id' => 'required|exists:schools,id',
+        ]);
+
+        $user = Auth::user();
+        $teacher = $user->teacher;
+
+        if (!$teacher || !$teacher->hasSchool($request->school_id)) {
+            return back()->with('error', 'Anda tidak terdaftar sebagai pengajar di sekolah yang dipilih.');
+        }
+
+        $school = \App\Models\School::findOrFail($request->school_id);
+        session(['guru_active_school_id' => $school->id]);
+
+        return back()->with('success', "Berhasil beralih ke: {$school->name}! Jadwal, presensi, dan data mengajar telah disesuaikan.");
+    }
+
+    /**
+     * Dashboard Personal Guru (HANYA melihat data miliknya sendiri di sekolah aktif)
      */
     public function dashboard()
     {
@@ -24,19 +46,22 @@ class GuruPortalController extends Controller
             return redirect()->route('login')->with('error', 'Profil guru tidak terhubung dengan akun Anda.');
         }
 
-        $setting = AttendanceSetting::getSettings();
+        $schoolId = current_school_id();
+        $setting = AttendanceSetting::getSettings($schoolId);
         $today = now()->toDateString();
 
-        // 1. Presensi Saya Hari Ini
+        // 1. Presensi Saya Hari Ini di Sekolah Aktif
         $todayAttendance = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $today)
             ->first();
 
-        // 2. Statistik Kehadiran Saya Bulan Ini
+        // 2. Statistik Kehadiran Saya Bulan Ini di Sekolah Aktif
         $startOfMonth = now()->startOfMonth()->toDateString();
         $endOfMonth = now()->endOfMonth()->toDateString();
 
         $monthAttendances = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->get();
 
@@ -48,35 +73,42 @@ class GuruPortalController extends Controller
         $totalAlpa = $monthAttendances->where('status', 'alpa')->count();
         $totalPresensi = $totalHadir + $totalTerlambat;
 
-        // 3. Riwayat 7 Hari Terakhir Saya
+        // 3. Riwayat 7 Hari Terakhir Saya di Sekolah Aktif
         $recentAttendances = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->orderBy('date', 'desc')
             ->take(7)
             ->get();
 
-        // 4. Jadwal Mengajar & Jurnal Hari Ini
+        // 4. Jadwal Mengajar & Jurnal Hari Ini di Sekolah Aktif
         $dayOfWeekIso = now()->dayOfWeekIso;
         $dayNames = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
         $todayDay = $dayNames[$dayOfWeekIso] ?? 'Senin';
 
         $todaySchedules = \App\Models\LessonSchedule::with(['schoolClass', 'subject'])
             ->where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('day', $todayDay)
             ->orderBy('start_time')
             ->get();
 
         $todayJournals = \App\Models\TeachingJournal::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $today)
             ->pluck('id', 'lesson_schedule_id')
             ->toArray();
 
-        // 5. Hitung Guru Izin Hari Ini (untuk indikator Laporan Izin & Inval)
-        $todayAbsentTeachersCount = Attendance::where('date', $today)
+        // 5. Hitung Guru Izin Hari Ini (untuk indikator Laporan Izin & Inval di sekolah ini)
+        $todayAbsentTeachersCount = Attendance::where('school_id', $schoolId)
+            ->where('date', $today)
             ->whereIn('status', ['izin', 'sakit'])
             ->count();
 
         // 6. Informasi Sekolah & Maklumat Yayasan Aktif
         $announcements = \App\Models\SchoolAnnouncement::where('is_active', true)
+            ->where(function ($q) use ($schoolId) {
+                $q->whereNull('school_id')->orWhere('school_id', $schoolId);
+            })
             ->orderByDesc('date')
             ->orderByDesc('id')
             ->get();
@@ -110,8 +142,10 @@ class GuruPortalController extends Controller
         $teacher = Auth::user()->teacher;
         $today = now()->toDateString();
         $now = now();
+        $schoolId = current_school_id();
 
         $existing = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $today)
             ->first();
 
@@ -124,7 +158,7 @@ class GuruPortalController extends Controller
             return back()->with('error', 'Wajah Anda belum terdaftar di sistem! Silakan lakukan Pendaftaran Wajah (Face Enrollment) terlebih dahulu agar sistem dapat mengenali Anda.');
         }
 
-        $setting = AttendanceSetting::getSettings();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         // Validasi: Hari Libur Sekolah
         if ($setting->is_holiday_today) {
@@ -172,6 +206,7 @@ class GuruPortalController extends Controller
         }
 
         Attendance::create([
+            'school_id' => $schoolId,
             'teacher_id' => $teacher->id,
             'date' => $today,
             'time_in' => $now->format('H:i:s'),
@@ -199,8 +234,10 @@ class GuruPortalController extends Controller
         $teacher = Auth::user()->teacher;
         $today = now()->toDateString();
         $now = now();
+        $schoolId = current_school_id();
 
         $attendance = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->where('date', $today)
             ->first();
 
@@ -217,7 +254,7 @@ class GuruPortalController extends Controller
             return back()->with('error', 'Wajah Anda belum terdaftar di sistem! Silakan daftarkan wajah Anda terlebih dahulu.');
         }
 
-        $setting = AttendanceSetting::getSettings();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
         // Validasi Geofence: Guru WAJIB berada di dalam titik lokasi yang telah ditentukan oleh Admin
         $geofenceCheck = $setting->isWithinGeofence($request->input('latitude'), $request->input('longitude'));
@@ -332,7 +369,7 @@ class GuruPortalController extends Controller
             'face_data' => $faceData,
         ]);
 
-        return back()->with('success', 'Wajah Anda berhasil didaftarkan secara biometrik di sistem HadirGuru! Anda kini dapat melakukan presensi menggunakan Face ID.');
+        return back()->with('success', 'Wajah Anda berhasil didaftarkan secara biometrik di sistem SIMPRES BU! Anda kini dapat melakukan presensi menggunakan Face ID.');
     }
 
     /**
@@ -368,11 +405,12 @@ class GuruPortalController extends Controller
     }
 
     /**
-     * Riwayat Lengkap Presensi Guru (HANYA data miliknya sendiri)
+     * Riwayat Lengkap Presensi Guru (HANYA data miliknya sendiri di sekolah aktif)
      */
     public function riwayat(Request $request)
     {
         $teacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
         $month = $request->input('month', now()->format('Y-m'));
         $status = $request->input('status');
 
@@ -380,6 +418,7 @@ class GuruPortalController extends Controller
         $endDate = Carbon::parse($month . '-01')->endOfMonth()->toDateString();
 
         $query = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date', 'desc');
 
@@ -391,6 +430,7 @@ class GuruPortalController extends Controller
 
         // Statistik bulan yang dipilih untuk guru ini
         $allMonth = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
@@ -419,11 +459,13 @@ class GuruPortalController extends Controller
     public function formIzin()
     {
         $teacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
         $today = now()->toDateString();
-        $setting = AttendanceSetting::getSettings();
+        $setting = AttendanceSetting::getSettings($schoolId);
 
-        // Ambil riwayat izin/sakit terbaru guru ini
+        // Ambil riwayat izin/sakit terbaru guru ini di sekolah aktif
         $leaveHistory = Attendance::where('teacher_id', $teacher->id)
+            ->where('school_id', $schoolId)
             ->whereIn('status', ['izin', 'sakit'])
             ->orderBy('date', 'desc')
             ->take(10)
@@ -444,10 +486,12 @@ class GuruPortalController extends Controller
         ]);
 
         $teacher = Auth::user()->teacher;
+        $schoolId = current_school_id();
 
         Attendance::updateOrCreate(
             [
                 'teacher_id' => $teacher->id,
+                'school_id' => $schoolId,
                 'date' => $request->date,
             ],
             [
@@ -493,6 +537,8 @@ class GuruPortalController extends Controller
             'nuptk' => 'nullable|string|max:50',
             'subject' => 'nullable|string|max:255',
             'employment_status' => 'nullable|string|max:50',
+            'teaches_in_foundation' => 'nullable|boolean',
+            'foundation_name' => 'nullable|string|max:150',
             'education' => 'nullable|string|max:50',
             'class_duty' => 'nullable|string|max:100',
             'birth_place' => 'nullable|string|max:100',
@@ -514,6 +560,10 @@ class GuruPortalController extends Controller
             'current_password.required_with' => 'Masukkan password saat ini jika ingin membuat password baru.',
         ]);
 
+        $defaultFoundationName = $teacher->school->foundation_name ?? \App\Models\AttendanceSetting::getGlobalSetting()->foundation_name ?? 'Yayasan Bahrul Ulum';
+        $teachesInFoundation = $request->boolean('teaches_in_foundation', false);
+        $foundationName = $teachesInFoundation ? ($request->input('foundation_name') ?: $defaultFoundationName) : null;
+
         $updateData = [
             'name' => $request->name,
             'gender' => $request->gender,
@@ -521,6 +571,8 @@ class GuruPortalController extends Controller
             'nuptk' => $request->nuptk,
             'subject' => $request->subject,
             'employment_status' => $request->employment_status,
+            'teaches_in_foundation' => $teachesInFoundation,
+            'foundation_name' => $foundationName,
             'education' => $request->education,
             'class_duty' => $request->class_duty,
             'birth_place' => $request->birth_place,

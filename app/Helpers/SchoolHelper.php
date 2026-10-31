@@ -21,12 +21,26 @@ if (!function_exists('current_school_id')) {
                 return $firstSchool ? $firstSchool->id : 1;
             }
 
-            if ($user->school_id) {
-                return (int) $user->school_id;
+            if ($user->teacher) {
+                $sessionGuruSchoolId = session('guru_active_school_id');
+                if ($sessionGuruSchoolId && School::where('id', $sessionGuruSchoolId)->exists()) {
+                    if ($user->teacher->hasSchool($sessionGuruSchoolId)) {
+                        return (int) $sessionGuruSchoolId;
+                    }
+                }
+
+                if ($user->teacher->school_id) {
+                    return (int) $user->teacher->school_id;
+                }
+
+                $firstAssigned = $user->teacher->assigned_schools->first();
+                if ($firstAssigned) {
+                    return (int) $firstAssigned->id;
+                }
             }
 
-            if ($user->teacher && $user->teacher->school_id) {
-                return (int) $user->teacher->school_id;
+            if ($user->school_id) {
+                return (int) $user->school_id;
             }
         }
 
@@ -73,3 +87,27 @@ if (!function_exists('is_superadmin')) {
         return Auth::check() && Auth::user()->isSuperAdmin();
     }
 }
+
+if (!function_exists('teacher_schools')) {
+    /**
+     * Dapatkan daftar sekolah yang ditugaskan kepada guru yang sedang login
+     */
+    function teacher_schools()
+    {
+        if (Auth::check() && Auth::user()->teacher) {
+            return Auth::user()->teacher->assigned_schools;
+        }
+        return collect();
+    }
+}
+
+if (!function_exists('is_multi_school_teacher')) {
+    /**
+     * Cek apakah guru yang login saat ini mengajar di lebih dari 1 sekolah
+     */
+    function is_multi_school_teacher(): bool
+    {
+        return teacher_schools()->count() > 1;
+    }
+}
+
